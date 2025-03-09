@@ -17,6 +17,11 @@ include_directories(${GTest_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of protobuf project
+set(absl_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/absl")
+find_package(absl CONFIG REQUIRED)
+set(utf8_range_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/utf8_range")
+find_package(utf8_range CONFIG REQUIRED)
+
 if (NOT DEFINED Protobuf_DIR)
     set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/protobuf")
 endif()
@@ -191,7 +196,7 @@ include_directories(${c-ares_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of ipfs-lite-cpp
-set(ipfs-lite-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/cmake/ipfs-lite-cpp")
+set(ipfs-lite-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib/cmake/ipfs-lite-cpp")
 set(ipfs-lite-cpp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/include")
 set(ipfs-lite-cpp_LIB_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib")
 set(CBOR_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/include/deps/tinycbor/src")

@@ -103,6 +103,13 @@ namespace sgns
                 auto headerbuff = std::make_shared<boost::asio::streambuf>();
                 status(CustomResult(sgns::AsyncError::outcome::success(Success{ "Starting HTTP File Read" })));
                 boost::asio::async_read(*socket, *headerbuff, boost::asio::transfer_all(), [self, ioc, handle_read, status, headerbuff, socket](const boost::system::error_code& read_error, std::size_t bytes_transferred) {
+                    // Check if read completed normally with EOF (boost::asio::error::eof)
+                    if (read_error && read_error != boost::asio::error::eof) {
+                        // Connection was interrupted before completion
+                        status(CustomResult(sgns::AsyncError::outcome::failure("HTTP Data Read failed. Connection interrupted.")));
+                        handle_read(ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(), false, false);
+                        return;
+                    }
                     //Make a vector buffer from data
                     auto buffer = std::make_shared<std::vector<char>>(boost::asio::buffers_begin(headerbuff->data()), boost::asio::buffers_end(headerbuff->data()));
 
