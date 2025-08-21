@@ -62,25 +62,32 @@ shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool
     //Create a handler
     auto handle_read = [this, savetype, suffix, finalcall](std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save) {
         std::cout << "Callback!" << std::endl;
-        //Parse Data
-        if (parse)
+        if (buffers)
         {
-            auto parserIter = parsers.find("mnn");
-            auto parser = dynamic_cast<FileParser*>(parserIter->second);
-            //shared_ptr<void> data = parser->ParseASync(buffer);
-        }
-        //Save data or otherwise decrement counter of operations
-        if (save)
-        {
-            auto handle_write = [this](std::shared_ptr<boost::asio::io_context> ioc) {
+            //Parse Data
+            if (parse)
+            {
+                auto parserIter = parsers.find("mnn");
+                auto parser = dynamic_cast<FileParser*>(parserIter->second);
+                //shared_ptr<void> data = parser->ParseASync(buffer);
+            }
+            //Save data or otherwise decrement counter of operations
+            if (save)
+            {
+                auto handle_write = [this](std::shared_ptr<boost::asio::io_context> ioc) {
+                    DecrementOutstandingOperations(ioc);
+                    };
+                auto saverIter = savers.find(savetype);
+                auto saver = saverIter->second;
+                saver->SaveASync(ioc, handle_write, "", buffers, suffix);
+            }
+            else {
+                // Handle completion
                 DecrementOutstandingOperations(ioc);
-            };
-            auto saverIter = savers.find(savetype);
-            auto saver = saverIter->second;
-            saver->SaveASync(ioc,handle_write,"",buffers, suffix);
+            }
         }
         else {
-            // Handle completion
+            std::cout << "Not buffers" << std::endl;
             DecrementOutstandingOperations(ioc);
         }
         finalcall(buffers);

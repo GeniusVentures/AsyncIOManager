@@ -52,17 +52,23 @@ namespace sgns
         }
         catch (const boost::system::system_error& e) {
             std::cerr << "Error resolving address: " << e.what() << std::endl;
-            handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                    handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
+                });
             return;
         }
         catch (const std::exception& e) {
             std::cerr << "Exception: " << e.what() << std::endl;
-            handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
+                });
             return;
         }
         catch (...) {
             std::cerr << "Unknown error occurred during address resolution." << std::endl;
-            handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
+                });
             return;
         }
         //boost::asio::ip::tcp::endpoint endpoint = *results.begin();
