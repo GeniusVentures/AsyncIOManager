@@ -14,7 +14,6 @@
 #include "FileSaver.hpp"
 #include "boost/asio.hpp"
 #include "boost/bind.hpp"
-#include "FILEError.hpp"
 #include <libp2p/outcome/outcome.hpp>
 
 namespace outcome {
@@ -22,9 +21,6 @@ namespace outcome {
     using libp2p::outcome::success;
     using libp2p::outcome::failure;
 }
-
-using Success = sgns::AsyncError::Success;
-using CustomResult = sgns::AsyncError::CustomResult;
 
 /// \brief FileManager class handles all the registration of the file loaders, parsers and savers and proxies the basic
 ///         functionality to the registered handlers
