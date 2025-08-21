@@ -8,15 +8,14 @@ add_library(AsyncIOManager STATIC
 	FileManager.cpp
 	HTTPCommon.cpp
 	HTTPLoader.cpp
-	IPFSCommon.cpp
-	IPFSLoader.cpp
-	IPFSSaver.cpp
-	MNNLoader.cpp
-	#MNNParser.cpp
-	MNNSaver.cpp
+	#IPFSCommon.cpp
+	#IPFSLoader.cpp
+	#IPFSSaver.cpp
+	#MNNLoader.cpp
+	#MNNSaver.cpp
 	URLStringUtil.cpp
-	WSCommon.cpp
-	WSLoader.cpp
+	#WSCommon.cpp
+	#WSLoader.cpp
     )
 
 add_proto_library(ipfs-unixfs proto/unixfs.proto)

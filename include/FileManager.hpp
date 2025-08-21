@@ -15,6 +15,14 @@
 #include "boost/asio.hpp"
 #include "boost/bind.hpp"
 #include "FILEError.hpp"
+#include <libp2p/outcome/outcome.hpp>
+
+namespace outcome {
+    using libp2p::outcome::result;
+    using libp2p::outcome::success;
+    using libp2p::outcome::failure;
+}
+
 using Success = sgns::AsyncError::Success;
 using CustomResult = sgns::AsyncError::CustomResult;
 
@@ -35,6 +43,7 @@ class FileManager
         int outstandingOperations_ = 0;
     public:
         static void InitializeSingletons();
+        using ResultType = outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>>;
         /**
          * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
          * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
@@ -42,17 +51,14 @@ class FileManager
          * @param parse - Whether to parse file upon completion (for MNN)
          * @param save - Whether to save the file to local disk upon completion
          */
-        using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save)>;
-        /**
-         * Status callback returns an error code as an async load proceeds
-         * @param int - Status code
-         */
-        using StatusCallback = std::function<void(const CustomResult&)>;
+        using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
+
         /**
          * Final callback returns data to application
          * @param buffers - Contains path/data loaded
          */
-        using FinalCallback = std::function<void(std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)>;
+        using FinalCallback = std::function<void(ResultType buffers)>;
+
         /// @brief Decrement operations counter so io_context thread can be shut down when all are complete.
         /// @param The io_context that we have been reading on
         void DecrementOutstandingOperations(std::shared_ptr<boost::asio::io_context> ioc);
@@ -85,7 +91,7 @@ class FileManager
          * @param status - Status function that will be updated with status codes as operation progresses
          * @return String indicating init
          */
-        shared_ptr<void> LoadASync(const std::string& url, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, StatusCallback status, FinalCallback finalcall, std::string savetype);
+        shared_ptr<void> LoadASync(const std::string& url, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, FinalCallback finalcall, std::string savetype);
 
         /// @brief Load a file given a filePath and optional parse the data
         /// @param url the full path and filename to load

@@ -27,7 +27,7 @@ namespace sgns
     }
 
 
-    std::shared_ptr<void> HTTPLoader::LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read, StatusCallback status)
+    std::shared_ptr<void> HTTPLoader::LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read)
     {
         //Parse hostname and path
         std::string http_host;
@@ -36,8 +36,8 @@ namespace sgns
         parseHTTPUrl(filename, http_host, http_path, http_port);
 
         auto httpDevice = std::make_shared<HTTPDevice>(http_host, http_path, http_port, parse, save);
-        httpDevice->StartHTTPDownload(ioc, handle_read, status);
-        std::shared_ptr<string> result = std::make_shared < string>("test");
+        httpDevice->StartHTTPDownload(ioc, handle_read);
+        std::shared_ptr<string> result = std::make_shared<string>("test");
         return result;
     }
 

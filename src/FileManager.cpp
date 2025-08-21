@@ -1,13 +1,13 @@
 #include "FileManager.hpp"
 #include "URLStringUtil.h"
-#include "MNNLoader.hpp"
-#include "MNNParser.hpp"
-#include "MNNSaver.hpp"
-#include "IPFSLoader.hpp"
-#include "IPFSSaver.hpp"
+//#include "MNNLoader.hpp"
+//#include "MNNParser.hpp"
+//#include "MNNSaver.hpp"
+//#include "IPFSLoader.hpp"
+//#include "IPFSSaver.hpp"
 #include "HTTPLoader.hpp"
-#include "SFTPLoader.hpp"
-#include "WSLoader.hpp"
+//#include "SFTPLoader.hpp"
+//#include "WSLoader.hpp"
 
 void FileManager::RegisterLoader(const std::string &prefix,
         FileLoader *handlerLoader)
@@ -33,16 +33,16 @@ void AsyncHandler(boost::system::error_code ec, std::size_t n, std::vector<char>
 }
 
 void FileManager::InitializeSingletons() {
-    sgns::MNNLoader::InitializeSingleton();
+    //sgns::MNNLoader::InitializeSingleton();
     //sgns::MNNParser::InitializeSingleton();
     //sgns::SFTPLoader::InitializeSingleton();
     sgns::HTTPLoader::InitializeSingleton();
     //sgns::WSLoader::InitializeSingleton();
-    sgns::IPFSLoader::InitializeSingleton();
-    sgns::IPFSSaver::InitializeSingleton();
-    sgns::MNNSaver::InitializeSingleton();
+    //sgns::IPFSLoader::InitializeSingleton();
+    //sgns::IPFSSaver::InitializeSingleton();
+    //sgns::MNNSaver::InitializeSingleton();
 }
-shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, StatusCallback status, FinalCallback finalcall, std::string savetype)
+shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, FinalCallback finalcall, std::string savetype)
 {
     std::string prefix;
     std::string filePath;
@@ -60,7 +60,7 @@ shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool
     //Increment Operations
     IncrementOutstandingOperations();
     //Create a handler
-    auto handle_read = [this, savetype, suffix, finalcall](std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save) {
+    auto handle_read = [this, savetype, suffix, finalcall](std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save) {
         std::cout << "Callback!" << std::endl;
         //Parse Data
         if (parse)
@@ -89,7 +89,7 @@ shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool
     auto loader = loaderIter->second;
     // double check pointer is to a FileLoader class
     assert(dynamic_cast<FileLoader*>(loader));
-    shared_ptr<void> data = loader->LoadASync(filePath,parse,save,ioc,handle_read,status);
+    shared_ptr<void> data = loader->LoadASync(filePath,parse,save,ioc,handle_read);
     return data;
 }
 
