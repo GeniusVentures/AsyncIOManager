@@ -1,9 +1,9 @@
 #include "FileManager.hpp"
 #include "URLStringUtil.h"
-//#include "MNNLoader.hpp"
+#include "MNNLoader.hpp"
 //#include "MNNParser.hpp"
 //#include "MNNSaver.hpp"
-//#include "IPFSLoader.hpp"
+#include "IPFSLoader.hpp"
 //#include "IPFSSaver.hpp"
 #include "HTTPLoader.hpp"
 //#include "SFTPLoader.hpp"
@@ -33,12 +33,12 @@ void AsyncHandler(boost::system::error_code ec, std::size_t n, std::vector<char>
 }
 
 void FileManager::InitializeSingletons() {
-    //sgns::MNNLoader::InitializeSingleton();
+    sgns::MNNLoader::InitializeSingleton();
     //sgns::MNNParser::InitializeSingleton();
     //sgns::SFTPLoader::InitializeSingleton();
     sgns::HTTPLoader::InitializeSingleton();
     //sgns::WSLoader::InitializeSingleton();
-    //sgns::IPFSLoader::InitializeSingleton();
+    sgns::IPFSLoader::InitializeSingleton();
     //sgns::IPFSSaver::InitializeSingleton();
     //sgns::MNNSaver::InitializeSingleton();
 }

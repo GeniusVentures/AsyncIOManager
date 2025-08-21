@@ -26,9 +26,14 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include "FILEError.hpp"
-using Success = sgns::AsyncError::Success;
-using CustomResult = sgns::AsyncError::CustomResult;
+
+#include <libp2p/outcome/outcome.hpp>
+
+namespace outcome {
+	using libp2p::outcome::result;
+	using libp2p::outcome::success;
+	using libp2p::outcome::failure;
+}
 
 namespace sgns
 {
@@ -182,6 +187,12 @@ namespace sgns
 	 */
 	class IPFSDevice {
 	public:
+		enum class Error
+		{
+			CANNOT_DECODE = 1,
+			NO_SOURCE = 2,
+		};
+		using ResultType = outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>>;
 		/**
 		 * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
 		 * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
@@ -189,12 +200,7 @@ namespace sgns
 		 * @param parse - Whether to parse file upon completion (for MNN)
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
-		using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save)>;
-		/**
-		 * Status callback returns an error code as an async load proceeds
-		 * @param int - Status code
-		 */
-		using StatusCallback = std::function<void(const CustomResult&)>;
+		using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
 
 		/**
 		 * Create an IPFS Singlelton Device and return instance
@@ -232,8 +238,7 @@ namespace sgns
 			int addressoffset,
 			bool parse,
 			bool save,
-			CompletionCallback handle_read,
-			StatusCallback status
+			CompletionCallback handle_read
 		);
 		void StartFindingPeersWithRetry(
 			std::shared_ptr<boost::asio::io_context> ioc,
@@ -242,8 +247,7 @@ namespace sgns
 			int addressoffset,
 			bool parse,
 			bool save,
-			CompletionCallback handle_read,
-			StatusCallback status);
+			CompletionCallback handle_read);
 		/**
 		 * Add the Main CID for a file to bitswap wantlist to get information or file(if small enough)
 		 * @param ioc - Asio io context to use
@@ -262,8 +266,7 @@ namespace sgns
 			int addressoffset,
 			bool parse,
 			bool save,
-			CompletionCallback handle_read,
-			StatusCallback status);
+			CompletionCallback handle_read);
 
 		/**
 		 * Add an address to pool of addresses to try to get file using IPFS bitswap
@@ -325,8 +328,7 @@ namespace sgns
 			int addressoffset,
 			bool parse,
 			bool save,
-			CompletionCallback handle_read,
-			StatusCallback status);
+			CompletionCallback handle_read);
 
 
 		//Common vars used for getting file from IPFS

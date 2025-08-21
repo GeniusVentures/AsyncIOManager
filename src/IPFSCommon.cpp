@@ -1,6 +1,16 @@
 //IPFSCommon.cpp
 #include "IPFSCommon.hpp"
-
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns, IPFSDevice::Error, e)
+{
+    switch (e)
+    {
+    case sgns::IPFSDevice::Error::CANNOT_DECODE:
+        return "Cannot decode bitswap data";
+    case sgns::IPFSDevice::Error::NO_SOURCE:
+        return "Cannot decode bitswap data";
+    }
+    return "Unknown error";
+}
 
 namespace sgns
 {
@@ -66,18 +76,14 @@ namespace sgns
         int addressoffset,
         bool parse,
         bool save,
-        CompletionCallback handle_read,
-        StatusCallback status
+        CompletionCallback handle_read
     )
     {
-        status(CustomResult(sgns::AsyncError::outcome::success(Success{ "Starting Bitswap DHT" })));
         auto peer_id =
             libp2p::peer::PeerId::fromHash(cid.content_address).value();
         dht_->FindProviders(cid, [=](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
-            status(CustomResult(sgns::AsyncError::outcome::success(Success{ "Got Provider Results" })));
             if (!res) {
                 std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
-                status(CustomResult(sgns::AsyncError::outcome::failure("DHT Failed, no address")));
                 return false;
             }
             std::cout << "Providers: " << std::endl;
@@ -100,13 +106,12 @@ namespace sgns
                     //}
                 //}
                 
-                return RequestBlockMain(ioc, cid, filename, 0, parse, save, handle_read, status);
+                return RequestBlockMain(ioc, cid, filename, 0, parse, save, handle_read);
             }
             else
             {
                 std::cout << "Empty providers list received" << std::endl;
-                status(CustomResult(sgns::AsyncError::outcome::failure("DHT Failed, no providers.")));
-                StartFindingPeersWithRetry(ioc, cid, filename, addressoffset, parse, save, handle_read, status);
+                StartFindingPeersWithRetry(ioc, cid, filename, addressoffset, parse, save, handle_read);
                 return false;
             }
             });
@@ -121,16 +126,15 @@ namespace sgns
         int addressoffset,
         bool parse,
         bool save,
-        CompletionCallback handle_read,
-        StatusCallback status)
+        CompletionCallback handle_read)
     {
         boost::asio::deadline_timer dhtretry(*ioc.get());
         boost::posix_time::time_duration timeout(boost::posix_time::milliseconds(10000));
         dhtretry_.expires_from_now(timeout);
-        dhtretry_.async_wait([ioc, cid, filename, addressoffset, parse, save, handle_read, status, this](const boost::system::error_code& ec) {
+        dhtretry_.async_wait([ioc, cid, filename, addressoffset, parse, save, handle_read, this](const boost::system::error_code& ec) {
             if (!ec) {
                 // Timer expired, call StartFindingPeers again with captured parameters
-                this->StartFindingPeers(ioc, cid, filename, addressoffset, parse, save, handle_read, status);
+                this->StartFindingPeers(ioc, cid, filename, addressoffset, parse, save, handle_read);
             }
             else {
                 // Handle error
@@ -146,11 +150,9 @@ namespace sgns
         int addressoffset,
         bool parse,
         bool save,
-        CompletionCallback handle_read,
-        StatusCallback status)
+        CompletionCallback handle_read)
     {
         //std::cout << "request main block" << filename << std::endl;
-        status(CustomResult(sgns::AsyncError::outcome::success(Success{ "Reading IPFS Blocks" })));
         if (addressoffset < peerAddresses_->size())
         {
             bitswap_->RequestBlock(peerAddresses_->at(addressoffset), cid,
@@ -172,12 +174,10 @@ namespace sgns
                         if (diddecode.has_error())
                         {
                             //Handle Error
-                            status(CustomResult(sgns::AsyncError::outcome::failure("Bitswap failed, could not decode")));
-                            handle_read(ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(), false, false);
+                            handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
                             return false;
                         }
                         //std::cout << "ContentTest" << decoder.getContent() << std::endl;
-                        status(CustomResult(sgns::AsyncError::outcome::success(Success{ "Reading IPFS Sub-Blocks" })));
                         //Start Adding to list
                         CIDInfo cidInfo(maincid.value());
                         for (size_t i = 0; i < decoder.getLinksCount(); ++i) {
@@ -201,7 +201,7 @@ namespace sgns
                             //Increment Outstanding
                             cidInfo.outstandingRequests_++;
                             //Request Additional CID
-                            RequestBlockSub(ioc, cid, cid, scid, passfilename, 0, parse, save, handle_read, status);
+                            RequestBlockSub(ioc, cid, cid, scid, passfilename, 0, parse, save, handle_read);
                         }
 
                         //Add to list in IPFSDevice
@@ -232,13 +232,12 @@ namespace sgns
                     }
                     else
                     {
-                        return RequestBlockMain(ioc, cid, filename, addressoffset + 1, parse, save, handle_read, status);
+                        return RequestBlockMain(ioc, cid, filename, addressoffset + 1, parse, save, handle_read);
                     }
                 });
         }
         else {
-            status(CustomResult(sgns::AsyncError::outcome::failure("Bitswap failed, ran out of addresses to get from")));
-            handle_read(ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(), false, false);
+            handle_read(ioc, outcome::failure(Error::NO_SOURCE), false, false);
             return false;
         }
         return false;
@@ -253,8 +252,7 @@ namespace sgns
         int addressoffset,
         bool parse,
         bool save,
-        CompletionCallback handle_read,
-        StatusCallback status)
+        CompletionCallback handle_read)
     {
         //std::cout << "directory: " << directory << std::endl;
         if (addressoffset < peerAddresses_->size())
@@ -287,8 +285,7 @@ namespace sgns
                         if (diddecode.has_error())
                         {
                             //Handle Error
-                            status(CustomResult(sgns::AsyncError::outcome::failure("Bitswap failed, could not decode data")));
-                            handle_read(ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(), false, false);
+                            handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
                             return false;
                         }
                         for (size_t i = 0; i < decoder.getLinksCount(); ++i) {
@@ -306,7 +303,7 @@ namespace sgns
                                 requestedCIDs_[mainindex].linkedCIDs.push_back(linkedCID);
                             }
                             requestedCIDs_[mainindex].outstandingRequests_++;
-                            RequestBlockSub(ioc, cid, scid, sscid, newdir, 0, parse, save, handle_read, status);
+                            RequestBlockSub(ioc, cid, scid, sscid, newdir, 0, parse, save, handle_read);
                         }
                         //If there are no links, this block is complete and we can see if we have all blocks for writing
                         if (decoder.getLinksCount() <= 0)
@@ -328,7 +325,6 @@ namespace sgns
                                 requestedCIDs_[mainindex].groupLinkedCIDs();
                                 //requestedCIDs_[mainindex].writeFinalContentsToDirectories();
                                 //std::cout << "IPFS Finish" << std::endl;
-                                status(CustomResult(sgns::AsyncError::outcome::success(Success{ "Bitswap Completed" })));
                                 handle_read(ioc, requestedCIDs_[mainindex].finalcontents, parse, save);
                             }
                         }
@@ -339,7 +335,7 @@ namespace sgns
                     else
                     {
                         //Request Block on next address
-                        return RequestBlockSub(ioc, cid, parentcid, scid, directory, addressoffset + 1, parse, save, handle_read, status);
+                        return RequestBlockSub(ioc, cid, parentcid, scid, directory, addressoffset + 1, parse, save, handle_read);
                     }
                 });
         }
