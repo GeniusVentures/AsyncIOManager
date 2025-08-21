@@ -15,7 +15,15 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/protocol/ping/ping.hpp>
 
-
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns, IPFSLoader::Error, e)
+{
+    switch (e)
+    {
+    case sgns::IPFSLoader::Error::CANNOT_LISTEN:
+        return "Cannot listen on address";
+    }
+    return "Unknown error";
+}
 
 namespace sgns
 {
@@ -73,7 +81,7 @@ namespace sgns
     # ----------------
       )");
 
-    std::shared_ptr<void> IPFSLoader::LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read, StatusCallback status)
+    std::shared_ptr<void> IPFSLoader::LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read)
     {
         auto logging_system = std::make_shared<soralog::LoggingSystem>(
             std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -101,7 +109,6 @@ namespace sgns
         if (!ipfsDeviceResult)
         {   
             //Error Listening
-            status(CustomResult(sgns::AsyncError::outcome::failure("Bitswap failed, cannot listen on address")));
             std::cerr << "Cannot listen address " << ". Error: " << ipfsDeviceResult.error().message() << std::endl;
             handle_read(ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(), false, false);
             return result;
@@ -118,9 +125,8 @@ namespace sgns
         //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/nyc1-3.hostnodes.pinata.cloud/ipfs/QmSarArpxemsPESa6FNkmuu9iSE1QWqPX2R3Aw6f5jq4D5").value());
         //CID of File
         auto cid = libp2p::multi::ContentIdentifierCodec::fromString(ipfs_cid).value();
-        status(CustomResult(sgns::AsyncError::outcome::success(Success{ "Starting IPFS Bitswap" })));
         ioc->post([=] {
-            ipfsDevice->RequestBlockMain(ioc, cid, ipfs_file, 0, parse, save, handle_read, status);
+            ipfsDevice->RequestBlockMain(ioc, cid, ipfs_file, 0, parse, save, handle_read);
             //ipfsDevice->StartFindingPeers(ioc, cid, ipfs_file, 0, parse, save, handle_read, status);
             });
         

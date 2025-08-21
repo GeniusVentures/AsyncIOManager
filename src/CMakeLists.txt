@@ -8,10 +8,10 @@ add_library(AsyncIOManager STATIC
 	FileManager.cpp
 	HTTPCommon.cpp
 	HTTPLoader.cpp
-	#IPFSCommon.cpp
-	#IPFSLoader.cpp
+	IPFSCommon.cpp
+	IPFSLoader.cpp
 	#IPFSSaver.cpp
-	#MNNLoader.cpp
+	MNNLoader.cpp
 	#MNNSaver.cpp
 	URLStringUtil.cpp
 	#WSCommon.cpp

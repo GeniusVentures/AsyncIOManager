@@ -27,6 +27,10 @@ namespace sgns
     {
         SINGLETON_PTR(IPFSLoader);
     public:
+        enum class Error
+        {
+            CANNOT_LISTEN = 1,
+        };
         static void InitializeSingleton();
 
         /**
@@ -36,7 +40,7 @@ namespace sgns
          * @param parse - Whether to parse file upon completion (for MNN)
          * @param save - Whether to save the file to local disk upon completion
          */
-        using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save)>;
+        using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
         /**
          * Status callback returns an error code as an async load proceeds
          * @param int - Status code
@@ -59,7 +63,7 @@ namespace sgns
          * @param status - Status function that will be updated with status codes as operation progresses
          * @return String indicating init
          */
-        std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback, StatusCallback status) override;
+        std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback) override;
     protected:
 
     };
