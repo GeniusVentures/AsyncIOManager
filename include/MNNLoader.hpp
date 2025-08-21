@@ -9,9 +9,6 @@
 #include "FileLoader.hpp"
 #include "MNNCommon.hpp"
 #include "ASIOSingleton.hpp"
-#include "FILEError.hpp"
-using Success = sgns::AsyncError::Success;
-using CustomResult = sgns::AsyncError::CustomResult;
 
 
 namespace sgns
@@ -38,11 +35,7 @@ namespace sgns
              * @param save - Whether to save the file to local disk upon completion
              */
             using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
-            /**
-             * Status callback returns an error code as an async load proceeds
-             * @param int - Status code
-             */
-            using StatusCallback = std::function<void(const CustomResult&)>;
+
             /**ok
              * Load Data on the MNN file
              * @param filename - MNN file part
