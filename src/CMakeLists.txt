@@ -10,9 +10,9 @@ add_library(AsyncIOManager STATIC
 	HTTPLoader.cpp
 	IPFSCommon.cpp
 	IPFSLoader.cpp
-	#IPFSSaver.cpp
+	IPFSSaver.cpp
 	MNNLoader.cpp
-	#MNNSaver.cpp
+	MNNSaver.cpp
 	URLStringUtil.cpp
 	#WSCommon.cpp
 	#WSLoader.cpp

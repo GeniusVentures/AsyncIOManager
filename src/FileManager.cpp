@@ -2,9 +2,9 @@
 #include "URLStringUtil.h"
 #include "MNNLoader.hpp"
 //#include "MNNParser.hpp"
-//#include "MNNSaver.hpp"
+#include "MNNSaver.hpp"
 #include "IPFSLoader.hpp"
-//#include "IPFSSaver.hpp"
+#include "IPFSSaver.hpp"
 #include "HTTPLoader.hpp"
 //#include "SFTPLoader.hpp"
 //#include "WSLoader.hpp"
@@ -39,8 +39,8 @@ void FileManager::InitializeSingletons() {
     sgns::HTTPLoader::InitializeSingleton();
     //sgns::WSLoader::InitializeSingleton();
     sgns::IPFSLoader::InitializeSingleton();
-    //sgns::IPFSSaver::InitializeSingleton();
-    //sgns::MNNSaver::InitializeSingleton();
+    sgns::IPFSSaver::InitializeSingleton();
+    sgns::MNNSaver::InitializeSingleton();
 }
 shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, FinalCallback finalcall, std::string savetype)
 {
