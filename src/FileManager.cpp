@@ -6,7 +6,7 @@
 #include "IPFSSaver.hpp"
 #include "HTTPLoader.hpp"
 #include "SFTPLoader.hpp"
-//#include "WSLoader.hpp"
+#include "WSLoader.hpp"
 
 void FileManager::RegisterLoader(const std::string &prefix,
         FileLoader *handlerLoader)
