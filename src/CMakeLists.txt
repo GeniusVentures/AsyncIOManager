@@ -16,6 +16,7 @@ add_library(AsyncIOManager STATIC
 	URLStringUtil.cpp
 	WSCommon.cpp
 	WSLoader.cpp
+	asiomgr-logger.cpp
     )
 
 add_proto_library(ipfs-unixfs proto/unixfs.proto)

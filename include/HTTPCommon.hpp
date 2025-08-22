@@ -15,6 +15,7 @@
 #include "boost/bind.hpp"
 #include "URLStringUtil.h"
 #include <libp2p/outcome/outcome.hpp>
+#include <asiomgr-logger.hpp>
 
 namespace outcome {
 	using libp2p::outcome::result;
@@ -86,6 +87,7 @@ namespace sgns
 			std::shared_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> socket,
 			CompletionCallback handle_read);
 
+		sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("HTTPCommon");
 		//Common vars used for getting file from HTTP
 		std::string http_host_;
 		std::string http_path_;
