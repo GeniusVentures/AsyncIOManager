@@ -24,6 +24,8 @@ namespace sgns
         virtual void SaveASync(std::shared_ptr<boost::asio::io_context> ioc, std::function<void(std::shared_ptr<boost::asio::io_context> ioc)> handle_write,
             std::string filename,
             ResultType data, std::string suffix) override;
+    private:
+        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("IPFSSaver");
 
     };
 }

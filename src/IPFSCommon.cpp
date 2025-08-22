@@ -83,34 +83,19 @@ namespace sgns
             libp2p::peer::PeerId::fromHash(cid.content_address).value();
         dht_->FindProviders(cid, [=](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
             if (!res) {
-                std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
+                m_logger->error("Cannot find providers: {}", res.error().message());
                 return false;
             }
-            std::cout << "Providers: " << std::endl;
             auto& providers = res.value();
             if (!providers.empty())
             {
                 addAddresses(providers);
-                //for (auto& provider : providers) {
-                //    std::cout << provider.id.toBase58() << std::endl;
-                //    auto providerid = provider.id.toBase58();
-
-                    //for (const auto& address : provider.addresses) {
-
-                        // Assuming addAddress function accepts a multiaddress as argument
-                        //bool hasPeerId = address.hasProtocol(libp2p::multi::Protocol::Code::P2P);
-                        //if (hasPeerId) {
-                        //    std::cout << "Address: " << address.getStringAddress() << std::endl;
-                        //    addAddress(address);
-                        //}
-                    //}
-                //}
                 
                 return RequestBlockMain(ioc, cid, filename, 0, parse, save, handle_read);
             }
             else
             {
-                std::cout << "Empty providers list received" << std::endl;
+                m_logger->error("Empty provider list received");
                 StartFindingPeersWithRetry(ioc, cid, filename, addressoffset, parse, save, handle_read);
                 return false;
             }
@@ -138,7 +123,7 @@ namespace sgns
             }
             else {
                 // Handle error
-                std::cout << "Error: " << ec.message() << std::endl;
+                m_logger->error("Error: {}", ec.message());
             }
             });
     }
@@ -152,7 +137,6 @@ namespace sgns
         bool save,
         CompletionCallback handle_read)
     {
-        //std::cout << "request main block" << filename << std::endl;
         if (addressoffset < peerAddresses_->size())
         {
             bitswap_->RequestBlock(peerAddresses_->at(addressoffset), cid,
@@ -177,7 +161,6 @@ namespace sgns
                             handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
                             return false;
                         }
-                        //std::cout << "ContentTest" << decoder.getContent() << std::endl;
                         //Start Adding to list
                         CIDInfo cidInfo(maincid.value());
                         for (size_t i = 0; i < decoder.getLinksCount(); ++i) {
@@ -195,7 +178,7 @@ namespace sgns
                             else
                             {
                                 CIDInfo::LinkedCIDInfo linkedCID(subcid.value(), maincid.value(), passfilename);
-                                std::cout << "add Linked CID: nothing here" << std::endl;
+                                m_logger->error("add Linked CID: nothing here");
                                 cidInfo.linkedCIDs.push_back(linkedCID); 
                             }
                             //Increment Outstanding
@@ -216,7 +199,6 @@ namespace sgns
                             //unixfs.set_data(decoder.getContent());
                             unixfs.ParseFromString(decoder.getContent());
                             auto bindata = std::vector<char>(unixfs.data().begin(), unixfs.data().end());
-                            std::cout << "REQCIDS: " << requestedCIDs_.size() << std::endl;
                             std::string passfilename = filename;
                             size_t mainindex = findRequestedCIDIndex(cid);
                             requestedCIDs_[mainindex].finalcontents->first.push_back(passfilename);
@@ -254,7 +236,6 @@ namespace sgns
         bool save,
         CompletionCallback handle_read)
     {
-        //std::cout << "directory: " << directory << std::endl;
         if (addressoffset < peerAddresses_->size())
         {
             bitswap_->RequestBlock(peerAddresses_->at(addressoffset), scid,
@@ -324,7 +305,6 @@ namespace sgns
                             {
                                 requestedCIDs_[mainindex].groupLinkedCIDs();
                                 //requestedCIDs_[mainindex].writeFinalContentsToDirectories();
-                                //std::cout << "IPFS Finish" << std::endl;
                                 handle_read(ioc, requestedCIDs_[mainindex].finalcontents, parse, save);
                             }
                         }

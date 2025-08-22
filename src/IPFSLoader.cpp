@@ -102,14 +102,12 @@ namespace sgns
         std::string ipfs_cid;
         std::string ipfs_file;
         parseIPFSUrl(filename, ipfs_cid, ipfs_file);
-        //std::cout << "IPFS Parse" << ipfs_cid << std::endl;
-        //std::cout << "IPFS Parse" << ipfs_file << std::endl;
         //Create Host
         auto ipfsDeviceResult = IPFSDevice::getInstance(ioc);
         if (!ipfsDeviceResult)
         {   
             //Error Listening
-            std::cerr << "Cannot listen address " << ". Error: " << ipfsDeviceResult.error().message() << std::endl;
+            m_logger->error("Cannot listen to address: {}", ipfsDeviceResult.error().message());
             handle_read(ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(), false, false);
             return result;
         }

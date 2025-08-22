@@ -15,6 +15,7 @@
 #include "boost/asio.hpp"
 #include "boost/bind.hpp"
 #include <libp2p/outcome/outcome.hpp>
+#include <asiomgr-logger.hpp>
 
 namespace outcome {
     using libp2p::outcome::result;
@@ -29,6 +30,7 @@ class FileManager
     SINGLETON_REF(FileManager)
         ;
     private:
+        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("FileManager");
         /// @brief a map from std::string to loader handlers
         map<std::string, FileLoader*> loaders;
         /// @brief a map from std::string to parser handlers

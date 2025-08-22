@@ -67,28 +67,6 @@ int main(int argc, char **argv)
     getURLComponents(
             "https://www.example.com/test.jpg",
             url_prefix, file_path, extension);
-     //Print the results.
-    //cout << "urlPrefix: " << url_prefix << endl;
-    //cout << "filePath: " << file_path << endl;
-    //cout << "extension: " << extension << endl;
-    //parseHTTPUrl(file_path, http_host, http_path);
-    //std::cout << "http host:" << http_host << std::endl;
-    //std::cout << "http path:" << http_path << std::endl;
-
-   // getURLComponents("file://./test.mnn", url_prefix, file_path, extension);
-    // Print the results.
-   // cout << "urlPrefix: " << url_prefix << endl;
-    //cout << "filePath: " << file_path << endl;
-    //cout << "extension: " << extension << endl;
-
-   // getURLComponents("ipfs://really/long/path/to/a/file/testme.jpg",
-     //       url_prefix, file_path, extension);
-    // Print the results.
-    //cout << "urlPrefix: " << url_prefix << endl;
-    //cout << "filePath: " << file_path << endl;
-    //cout << "extension: " << extension << endl;
-    std::cout << "hmm" << std::endl;
-
 
     // test plugins
     if (file_name.empty())
@@ -96,7 +74,21 @@ int main(int argc, char **argv)
         file_name = FILE_PATH_NAME;
     }
     auto loggerHttpCommon = sgns::asiomgr::createLogger("HTTPCommon");
+    auto loggerFileManager = sgns::asiomgr::createLogger("FileManager");
+    auto loggerIpfsLoader = sgns::asiomgr::createLogger("IPFSLoader");
+    auto loggerWSCommon = sgns::asiomgr::createLogger("WSCommon");
+    auto loggerIPFSCommon = sgns::asiomgr::createLogger("IPFSCommon");
+    auto loggerFILECommon = sgns::asiomgr::createLogger("FILECommon");
+    auto loggerIPFSSaver = sgns::asiomgr::createLogger("IPFSSaver");
+    auto loggerMNNLoader = sgns::asiomgr::createLogger("MNNLoader");
     loggerHttpCommon->set_level(spdlog::level::trace);
+    loggerFileManager->set_level(spdlog::level::trace);
+    loggerIpfsLoader->set_level(spdlog::level::trace);
+    loggerWSCommon->set_level(spdlog::level::trace);
+    loggerIPFSCommon->set_level(spdlog::level::trace);
+    loggerFILECommon->set_level(spdlog::level::trace);
+    loggerIPFSSaver->set_level(spdlog::level::trace);
+    loggerMNNLoader->set_level(spdlog::level::trace);
     //auto ioc = std::make_shared<boost::asio::io_context>();
     
     //auto injector = libp2p::injector::makeHostInjector();
@@ -115,9 +107,6 @@ int main(int argc, char **argv)
     boost::asio::io_context::executor_type executor = ioc->get_executor();
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
 
-    //auto dummyCallback = [](std::shared_ptr<boost::asio::io_context>, std::shared_ptr<std::vector<char>>, bool parse, bool save) {
-    //    // Do nothing
-    //};
     FileManager::GetInstance().InitializeSingletons();
     for (int i = 0; i < file_names.size(); i++)
     {

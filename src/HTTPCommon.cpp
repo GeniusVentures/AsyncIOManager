@@ -65,14 +65,13 @@ namespace sgns
             return;
         }
         catch (...) {
-            std::cerr << "Unknown error occurred during address resolution." << std::endl;
             m_logger->error("Error resolving address: Unknown");
             boost::asio::post(*ioc, [handle_read, ioc]() {
                 handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
                 });
             return;
         }
-        //boost::asio::ip::tcp::endpoint endpoint = *results.begin();
+
 
         //Create SSL Context
         auto ssl_context = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tls);
@@ -80,10 +79,6 @@ namespace sgns
         //Disclude certain older insecure options
         ssl_context->set_options(boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::no_sslv3);
 
-        
-
-        //Consider setting verify callback to check whether domain name matches cert
-        // ssl_context->set_verify_callback(...);
         //Create Socket with SSL Context
         auto socket = std::make_shared<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>(*ioc, *ssl_context);
         if (!SSL_set_tlsext_host_name(socket->native_handle(), http_host_.c_str())) {
@@ -102,13 +97,13 @@ namespace sgns
                             self->StartHTTPGet(ioc, socket, handle_read);
                         }
                         else {
-                            std::cerr << "Handshake error: " << handshake_error.message() << std::endl;
+                            self->m_logger->error("Handshake error: {}", handshake_error.message());
                             handle_read(ioc, outcome::failure(Error::HANDSHAKE_ERROR), false, false);
                         }
                         });
                 }
                 else {
-                    std::cerr << "Connection error: " << connect_error.message() << std::endl;
+                    self->m_logger->error("Connection error: {}", connect_error.message());
                     handle_read(ioc, outcome::failure(Error::CONNECT_ERROR), false, false);
                 }
             });
@@ -128,6 +123,7 @@ namespace sgns
                     // Check if read completed normally with EOF (boost::asio::error::eof)
                     if (read_error && read_error != boost::asio::error::eof) {
                         // Connection was interrupted before completion
+                        self->m_logger->error("Error, connection interrupted");
                         handle_read(ioc, outcome::failure(Error::CON_INTERRUPT), false, false);
                         return;
                     }
@@ -142,15 +138,10 @@ namespace sgns
 
                     //Check if we found an end
                     if (headerEnd != std::string::npos) {
-                        //Create vector of binary data by cutting off the header.
-                        //auto binaryData = std::make_shared<std::vector<char>>(buffer->begin() + headerEnd + 4, buffer->end());
-
                         //Send this to handler to be processed.
-                        //std::cout << "HTTPS Finish" << std::endl;
                         auto finaldata = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
                         std::filesystem::path p(self->http_path_);
                         finaldata->first.push_back(p.filename().string());
-                        //finaldata->second.push_back(*binaryData);
                         finaldata->second.emplace_back(
                             buffer->begin() + headerEnd + 4,  
                             buffer->end()                     
@@ -158,12 +149,13 @@ namespace sgns
                         handle_read(ioc, finaldata, self->parse_, self->save_);
                     }
                     else {
+                        self->m_logger->error("Error, no header in http");
                         handle_read(ioc, outcome::failure(Error::NO_HEADER), false, false);
                     }
                     });
             }
             else {
-                std::cerr << "Error in async_write: " << write_error.message() << std::endl;
+                self->m_logger->error("Error in async_write: {}", write_error.message());
                 handle_read(ioc, outcome::failure(Error::REQ_FAILED), false, false);
             }
             });

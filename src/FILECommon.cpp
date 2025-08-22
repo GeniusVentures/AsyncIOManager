@@ -19,12 +19,12 @@ namespace sgns
             fd_ = open(filename.c_str(), O_WRONLY);
         }
         if (fd_ == -1) {
-            std::cerr << "Failed to open file" << std::endl;
+            m_logger->error("Failed to open file");
             return;
         }
         file_.assign(fd_,ec_);
         if (ec_) {
-            std::cerr << "Failed to assign file descriptor: " << ec_.message() << std::endl;
+            m_logger->error("Failed to assign file descriptor: {}", ec_.message());
         }
     }
 #else
@@ -41,7 +41,7 @@ namespace sgns
             }
         }
         catch(const boost::system::system_error& er){
-            std::cerr << "Error: " << er.what() << std::endl;
+            m_logger->error("Error: {}", er.what());
         }
     }
 #endif

@@ -10,7 +10,7 @@
 #include <iostream>
 #include <memory>
 #include "boost/asio.hpp"
-
+#include <asiomgr-logger.hpp>
 
 namespace sgns
 {
@@ -42,6 +42,7 @@ namespace sgns
             return file_;
         }
     private:
+        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("FILECommon");
         //Common vars used for file loading
         boost::asio::posix::stream_descriptor file_;
         boost::system::error_code ec_;
@@ -69,6 +70,7 @@ namespace sgns
             return file_;
         }
     private:
+        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("FILECommon");
         //Common vars used for file loading
         boost::asio::stream_file file_;
         boost::system::error_code ec_;

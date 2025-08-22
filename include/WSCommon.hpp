@@ -15,6 +15,7 @@
 #include "boost/asio.hpp"
 #include "URLStringUtil.h"
 #include <libp2p/outcome/outcome.hpp>
+#include <asiomgr-logger.hpp>
 
 namespace outcome {
 	using libp2p::outcome::result;
@@ -86,6 +87,7 @@ namespace sgns
 			std::shared_ptr<boost::beast::websocket::stream<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>> ws,
 			CompletionCallback handle_read);
 
+		sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("WSCommon");
 		//Common vars used for getting file from SFTP
 		std::string ws_host_;
 		std::string ws_path_;

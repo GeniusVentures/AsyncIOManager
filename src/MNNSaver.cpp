@@ -65,7 +65,6 @@ namespace sgns
         for (size_t i = 0; i < data.value()->first.size(); ++i) {
             //Create Directories for files
             const std::string& directoryWithFile = filename + data.value()->first[i];
-            std::cout << "dirwithfile: " << directoryWithFile << std::endl;
             std::filesystem::path filePath(directoryWithFile);
             std::filesystem::path directory = filePath.parent_path();
             std::filesystem::create_directories(directory);
@@ -76,7 +75,6 @@ namespace sgns
 
             async_write(fileDevice->getFile(), boost::asio::buffer(data.value()->second[i].data(), data.value()->second[i].size()), boost::asio::transfer_exactly(data.value()->second[i].size()), [fileDevice, ioc, handle_write, data, remainingWrites](const boost::system::error_code& error, std::size_t bytes_transferred)
                 {
-                    std::cout << "wrote" << std::endl;
                     (*remainingWrites)--;
                     if (*remainingWrites <= 0)
                     {
