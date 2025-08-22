@@ -159,6 +159,13 @@ void FileManager::SaveFile(const std::string &url, std::shared_ptr<void> data)
 /// @brief Function to decrement operation count
 void FileManager::DecrementOutstandingOperations(std::shared_ptr<boost::asio::io_context> ioc)
 {
+    if (outstandingOperations_ <= 0)
+    {
+        // Clean up io_context
+        m_logger->error("Tried to decrement operations but we have none already. This should never happen");
+        ioc->stop();
+        return;
+    }
     // Decrement the counter
     outstandingOperations_--;
 

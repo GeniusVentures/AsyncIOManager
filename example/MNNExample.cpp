@@ -111,7 +111,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < file_names.size(); i++)
     {
         std::cout << "LoadASync: " << file_names[i] << std::endl;
-        auto data = FileManager::GetInstance().LoadASync(file_names[i], false, false, ioc, 
+        auto data = FileManager::GetInstance().LoadASync(file_names[i], false, true, ioc, 
                 [](outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers)
                 {
                     if (buffers)
