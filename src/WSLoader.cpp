@@ -39,9 +39,6 @@ namespace sgns
         std::string ws_path;
         std::string ws_port;
         parseHTTPUrl(filename, ws_host, ws_path, ws_port);
-        std::cout << "host " << ws_host << std::endl;
-        std::cout << "path " << ws_path << std::endl;
-        std::cout << "port " << ws_port << std::endl;
 
         auto httpDevice = std::make_shared<WSDevice>(ws_host, ws_path, ws_port, parse, save);
         httpDevice->StartWSDownload(ioc, handle_read);

@@ -48,9 +48,7 @@ shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool
     std::string suffix;
 	
     getURLComponents(url, prefix, filePath, suffix);
-#if 0
-    std::cout << "DEBUG: URL: " << url << " -prefix: " << prefix << " -filePath: " << filePath << " -suffix: " << suffix << std::endl;
-#endif
+    m_logger->debug("URL: {} -prefix: {} -filePath: {} -suffix: {}", url, prefix, filePath, suffix);
     auto loaderIter = loaders.find(prefix);
     if (loaderIter == loaders.end())
     {
@@ -60,7 +58,6 @@ shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool
     IncrementOutstandingOperations();
     //Create a handler
     auto handle_read = [this, savetype, suffix, finalcall](std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save) {
-        std::cout << "Callback!" << std::endl;
         if (buffers)
         {
             //Parse Data
@@ -86,7 +83,6 @@ shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool
             }
         }
         else {
-            std::cout << "Not buffers" << std::endl;
             DecrementOutstandingOperations(ioc);
         }
         finalcall(buffers);
@@ -106,9 +102,6 @@ shared_ptr<void> FileManager::LoadFile(const std::string &url, bool parse)
     std::string suffix;
 
     getURLComponents(url, prefix, filePath, suffix);
-#if 0
-    std::cout << "DEBUG: URL: " << url << " -prefix: " << prefix << " -filePath: " << filePath << " -suffix: " << suffix << std::endl;
-#endif
     auto loaderIter = loaders.find(prefix);
     if (loaderIter == loaders.end())
     {

@@ -44,19 +44,19 @@ namespace sgns
             results = resolver.resolve(ws_host_, ws_port_);
         }
         catch (const boost::system::system_error& e) {
-            std::cerr << "Error resolving address: " << e.what() << std::endl;
+            m_logger->error("Error resolving address: {}", e.what());
             boost::asio::post(*ioc, [handle_read, ioc]() {
                 handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
                 });
         }
         catch (const std::exception& e) {
-            std::cerr << "Exception: " << e.what() << std::endl;
+            m_logger->error("Error resolving address: {}", e.what());
             boost::asio::post(*ioc, [handle_read, ioc]() {
                 handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
                 });
         }
         catch (...) {
-            std::cerr << "Unknown error occurred during address resolution." << std::endl;
+            m_logger->error("Error resolving address: Unknown");
             boost::asio::post(*ioc, [handle_read, ioc]() {
                 handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
                 });
@@ -86,13 +86,13 @@ namespace sgns
                         self->StartWSGet(ioc, ws, handle_read);
                     }
                     else {
-                        std::cerr << "SSL handshake error: " << handshakeError.message() << std::endl;
+                        self->m_logger->error("SSL handshake error: {}", handshakeError.message());
                         handle_read(ioc, outcome::failure(Error::HANDSHAKE_ERROR), false, false);
                     }
                     });
             }
             else {
-                std::cerr << "Connect error: " << error.message() << std::endl;
+                self->m_logger->error("Connection error: {}", error.message());
                 handle_read(ioc, outcome::failure(Error::CONNECT_ERROR), false, false);
             }
             });
@@ -114,12 +114,9 @@ namespace sgns
                         boost::asio::async_read_until(*ws, *buffer, "WSEOF", [self, ioc, ws, handle_read, buffer](const boost::system::error_code& read_error, std::size_t bytes_transferred) {
                             if (!read_error)
                             {
-                                //auto outbuf = std::make_shared<std::vector<char>>(boost::asio::buffers_begin(buffer->data()), boost::asio::buffers_end(buffer->data()) - 5);
-                                //std::cout << "WSS Finish" << std::endl;
                                 auto finaldata = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
                                 std::filesystem::path p(self->ws_path_);
                                 finaldata->first.push_back(p.filename().string());
-                                //finaldata->second.push_back(*outbuf);
                                 size_t dataSize = buffer->size()-5;
                                 finaldata->second.emplace_back(
                                     boost::asio::buffers_begin(buffer->data()),
@@ -128,18 +125,18 @@ namespace sgns
                                 handle_read(ioc, finaldata, self->parse_, self->save_);
                             }
                             else {
-                                std::cerr << "File request read error: " << read_error.message() << std::endl;
+                                self->m_logger->error("File request read error: {}", read_error.message());
                                 handle_read(ioc, outcome::failure(Error::NO_EOF), false, false);
                             }
                             });
                     }
                     else {
-                        std::cerr << "File request write error: " << write_error.message() << std::endl;
+                        self->m_logger->error("File request write error: {}", write_error.message());
                     }
                     });
             }
             else {
-                std::cerr << "WebSocket handshake error: " << handshakeError.message() << std::endl;
+                self->m_logger->error("WebSocket handshake error: {}", handshakeError.message());
                 handle_read(ioc, outcome::failure(Error::WS_HANDSHAKE_ERROR), false, false);
             }
             });

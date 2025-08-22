@@ -28,6 +28,7 @@
 #include <boost/uuid/uuid_io.hpp>
 
 #include <libp2p/outcome/outcome.hpp>
+#include <asiomgr-logger.hpp>
 
 namespace outcome {
 	using libp2p::outcome::result;
@@ -330,6 +331,7 @@ namespace sgns
 			bool save,
 			CompletionCallback handle_read);
 
+		sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("IPFSCommon");
 
 		//Common vars used for getting file from IPFS
 		static std::shared_ptr<IPFSDevice> instance_;

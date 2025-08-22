@@ -54,6 +54,8 @@ namespace sgns
              * @return String indicating init
              */
             std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback) override;
+        private:
+            sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("MNNLoader");
         protected:
 
     };

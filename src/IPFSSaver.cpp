@@ -20,13 +20,13 @@ namespace sgns
     }
 
     void IPFSSaver::SaveFile(std::string filename, std::shared_ptr<void> data) {
-        std::cout << (char*)data.get() << " -> Inside the IPFSSaver::SaveFile Function";
+        m_logger->info("Inside the IPFSSaver::SaveFile Function");
     }
     inline std::vector<uint8_t> operator""_unhex(const char* c, size_t s) {
         return sgns::common::unhex(std::string_view(c, s)).value();
     }
     void IPFSSaver::SaveASync(std::shared_ptr<boost::asio::io_context> ioc, std::function<void(std::shared_ptr<boost::asio::io_context> ioc)> handle_write, std::string filename, ResultType data, std::string suffix) {
-        std::cout << "Inside the IPFSSaver::SaveASync Function" << std::endl;
+        m_logger->info("Inside the IPFSSaver::SaveASync Function");
         if (data.value()->first.data() == nullptr)
         {
             throw range_error("Can not save with null data");
