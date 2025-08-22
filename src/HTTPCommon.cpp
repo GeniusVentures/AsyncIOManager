@@ -46,19 +46,19 @@ namespace sgns
         boost::asio::ip::tcp::resolver resolver(*ioc);
         boost::asio::ip::tcp::endpoint endpoint;
         try {
-            std::cout << "resolving address" << std::endl;
+            m_logger->info("Resolving Address");
             boost::asio::ip::tcp::resolver::results_type results = resolver.resolve(http_host_, "https");
             endpoint = *results.begin();
         }
         catch (const boost::system::system_error& e) {
-            std::cerr << "Error resolving address: " << e.what() << std::endl;
+            m_logger->error("Error resolving address: {}", e.what());
             boost::asio::post(*ioc, [handle_read, ioc]() {
                     handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
                 });
             return;
         }
         catch (const std::exception& e) {
-            std::cerr << "Exception: " << e.what() << std::endl;
+            m_logger->error("Error resolving address: {}", e.what());
             boost::asio::post(*ioc, [handle_read, ioc]() {
                 handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
                 });
@@ -66,6 +66,7 @@ namespace sgns
         }
         catch (...) {
             std::cerr << "Unknown error occurred during address resolution." << std::endl;
+            m_logger->error("Error resolving address: Unknown");
             boost::asio::post(*ioc, [handle_read, ioc]() {
                 handle_read(ioc, outcome::failure(Error::COULD_NOT_RESOLVE), false, false);
                 });

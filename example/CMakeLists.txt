@@ -3,5 +3,5 @@ FILE(GLOB MNN_LIBS "${MNN_LIBRARY_DIR}/*")
 add_executable(MNNExample MNNExample.cpp)
 
 add_dependencies(MNNExample AsyncIOManager)
-target_link_libraries(MNNExample PRIVATE AsyncIOManager)
+target_link_libraries(MNNExample PRIVATE AsyncIOManager spdlog::spdlog)
 include_directories(../include)

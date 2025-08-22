@@ -5,6 +5,7 @@
 #include <vector>
 #include "ASIOSingleton.hpp"
 #include "FileManager.hpp"
+#include <asiomgr-logger.hpp>
 //#include "MNNLoader.hpp"
 //#include "MNNParser.hpp"
 //#include "IPFSLoader.hpp"
@@ -94,7 +95,8 @@ int main(int argc, char **argv)
     {
         file_name = FILE_PATH_NAME;
     }
-
+    auto loggerHttpCommon = sgns::asiomgr::createLogger("HTTPCommon");
+    loggerHttpCommon->set_level(spdlog::level::trace);
     //auto ioc = std::make_shared<boost::asio::io_context>();
     
     //auto injector = libp2p::injector::makeHostInjector();
