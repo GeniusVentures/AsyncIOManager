@@ -32,7 +32,7 @@ namespace sgns
         /* TODO: scorpioluck20 - Need to implement this. How we load file base on format file?*/
     }
 
-    std::shared_ptr<void> WSLoader::LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read, StatusCallback status)
+    std::shared_ptr<void> WSLoader::LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read)
     {
         //Parse hostname and path
         std::string ws_host;
@@ -44,7 +44,7 @@ namespace sgns
         std::cout << "port " << ws_port << std::endl;
 
         auto httpDevice = std::make_shared<WSDevice>(ws_host, ws_path, ws_port, parse, save);
-        httpDevice->StartWSDownload(ioc, handle_read, status);
+        httpDevice->StartWSDownload(ioc, handle_read);
 
         std::shared_ptr<string> result = std::make_shared < string>("test");
         return result;

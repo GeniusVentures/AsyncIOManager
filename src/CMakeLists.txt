@@ -14,8 +14,8 @@ add_library(AsyncIOManager STATIC
 	MNNLoader.cpp
 	MNNSaver.cpp
 	URLStringUtil.cpp
-	#WSCommon.cpp
-	#WSLoader.cpp
+	WSCommon.cpp
+	WSLoader.cpp
     )
 
 add_proto_library(ipfs-unixfs proto/unixfs.proto)
