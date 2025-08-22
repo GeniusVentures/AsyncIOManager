@@ -1,12 +1,11 @@
 #include "FileManager.hpp"
 #include "URLStringUtil.h"
 #include "MNNLoader.hpp"
-//#include "MNNParser.hpp"
 #include "MNNSaver.hpp"
 #include "IPFSLoader.hpp"
 #include "IPFSSaver.hpp"
 #include "HTTPLoader.hpp"
-//#include "SFTPLoader.hpp"
+#include "SFTPLoader.hpp"
 //#include "WSLoader.hpp"
 
 void FileManager::RegisterLoader(const std::string &prefix,
