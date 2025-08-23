@@ -21,6 +21,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns, IPFSLoader::Error, e)
     {
     case sgns::IPFSLoader::Error::CANNOT_LISTEN:
         return "Cannot listen on address";
+    case sgns::IPFSLoader::Error::BAD_CID:
+        return "IPFS CID is invalid";
     }
     return "Unknown error";
 }
@@ -108,7 +110,9 @@ namespace sgns
         {   
             //Error Listening
             m_logger->error("Cannot listen to address: {}", ipfsDeviceResult.error().message());
-            handle_read(ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(), false, false);
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::CANNOT_LISTEN), false, false);
+                });
             return result;
         }
         auto ipfsDevice = ipfsDeviceResult.value();
@@ -122,7 +126,16 @@ namespace sgns
         //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/nyc1-2.hostnodes.pinata.cloud/ipfs/QmPySsdmbczdZYBpbi2oq2WMJ8ErbfxtkG8Mo192UHkfGP").value());
         //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/nyc1-3.hostnodes.pinata.cloud/ipfs/QmSarArpxemsPESa6FNkmuu9iSE1QWqPX2R3Aw6f5jq4D5").value());
         //CID of File
-        auto cid = libp2p::multi::ContentIdentifierCodec::fromString(ipfs_cid).value();
+        auto maybe_cid = libp2p::multi::ContentIdentifierCodec::fromString(ipfs_cid);
+        if (!maybe_cid)
+        {
+            m_logger->error("Bad CID: {}", maybe_cid.error().message());
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::BAD_CID), false, false);
+                });
+            return result;
+        }
+        auto cid = maybe_cid.value();
         ioc->post([=] {
             ipfsDevice->RequestBlockMain(ioc, cid, ipfs_file, 0, parse, save, handle_read);
             //ipfsDevice->StartFindingPeers(ioc, cid, ipfs_file, 0, parse, save, handle_read, status);
