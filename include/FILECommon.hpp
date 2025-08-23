@@ -11,6 +11,13 @@
 #include <memory>
 #include "boost/asio.hpp"
 #include <asiomgr-logger.hpp>
+#include <libp2p/outcome/outcome.hpp>
+
+namespace outcome {
+    using libp2p::outcome::result;
+    using libp2p::outcome::success;
+    using libp2p::outcome::failure;
+}
 
 namespace sgns
 {
@@ -35,6 +42,7 @@ namespace sgns
             file_.close(ec_);
             close(fd_);
         }
+        boost::system::error_code Open();
         /**
          * Get the current file pointer for async operations
          */
@@ -46,6 +54,8 @@ namespace sgns
         //Common vars used for file loading
         boost::asio::posix::stream_descriptor file_;
         boost::system::error_code ec_;
+        std::string filename_;
+        int flags_;
         int fd_ = -1;
     };
 #else
@@ -63,6 +73,7 @@ namespace sgns
             // Cleanup
             file_.close();
         }
+        boost::system::error_code Open();
         /**
          * Get the current file pointer for async operations
          */
@@ -74,6 +85,8 @@ namespace sgns
         //Common vars used for file loading
         boost::asio::stream_file file_;
         boost::system::error_code ec_;
+        std::string filename_;
+        int flags_;
     };
 #endif
 
