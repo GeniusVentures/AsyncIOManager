@@ -12,7 +12,9 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns, MNNLoader::Error, e)
     switch (e)
     {
     case sgns::MNNLoader::Error::READ_ERROR:
-        return "HTTP Could not resolve address";
+        return "File could not be read";
+    case sgns::MNNLoader::Error::FILE_OPEN_FAIL:
+        return "File could not be opened";
     }
     return "Unknown error";
 }
@@ -54,6 +56,14 @@ namespace sgns
         std::shared_ptr<string> result = std::make_shared < string>("init");
         // Create a file device which will have a stream_descriptor or stream_file based on whether we are on posix OS or not.
         auto fileDevice = std::make_shared<FILEDevice>(ioc, filename, 0);
+        auto tryopen = fileDevice->Open();
+        if (tryopen) {
+            // File open failure
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::FILE_OPEN_FAIL), false, false);
+                });
+            return result;
+        }
         auto buffer = std::make_shared<boost::asio::streambuf>();
         ////Async Read.
        boost::asio::async_read(fileDevice->getFile(), *buffer,

@@ -24,6 +24,7 @@ namespace sgns
             enum class Error
             {
                 READ_ERROR = 1,
+                FILE_OPEN_FAIL = 2,
             };
             static void InitializeSingleton();
  
