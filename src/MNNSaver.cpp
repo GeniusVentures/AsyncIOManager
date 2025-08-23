@@ -12,6 +12,17 @@
 #include "FileManager.hpp"
 #include "MNNSaver.hpp"
 #include "FILECommon.hpp"
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns, MNNSaver::Error, e)
+{
+    switch (e)
+    {
+    case sgns::MNNSaver::Error::READ_ERROR:
+        return "File could not be read";
+    case sgns::MNNSaver::Error::FILE_OPEN_FAIL:
+        return "File could not be opened";
+    }
+    return "Unknown error";
+}
 
 namespace sgns
 {
@@ -72,7 +83,14 @@ namespace sgns
             //Create Steam for async writes
             std::ofstream file(directoryWithFile, std::ios::binary);
             auto fileDevice = std::make_shared<FILEDevice>(ioc, directoryWithFile, 1);
-
+            auto tryopen = fileDevice->Open();
+            if (tryopen) {
+                // File open failure
+                boost::asio::post(*ioc, [handle_write, ioc]() {
+                    handle_write(ioc);
+                    });
+                return;
+            }
             async_write(fileDevice->getFile(), boost::asio::buffer(data.value()->second[i].data(), data.value()->second[i].size()), boost::asio::transfer_exactly(data.value()->second[i].size()), [fileDevice, ioc, handle_write, data, remainingWrites](const boost::system::error_code& error, std::size_t bytes_transferred)
                 {
                     (*remainingWrites)--;
