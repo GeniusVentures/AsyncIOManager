@@ -23,6 +23,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns, IPFSLoader::Error, e)
         return "Cannot listen on address";
     case sgns::IPFSLoader::Error::BAD_CID:
         return "IPFS CID is invalid";
+    case sgns::IPFSLoader::Error::INVALID_URL:
+        return "Invalid URL";
     }
     return "Unknown error";
 }
@@ -103,7 +105,13 @@ namespace sgns
         //Get CID and Filename
         std::string ipfs_cid;
         std::string ipfs_file;
-        parseIPFSUrl(filename, ipfs_cid, ipfs_file);
+        if (!parseIPFSUrl(filename, ipfs_cid, ipfs_file))
+        {
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::INVALID_URL), false, false);
+                });
+            return result;
+        }
         //Create Host
         auto ipfsDeviceResult = IPFSDevice::getInstance(ioc);
         if (!ipfsDeviceResult)

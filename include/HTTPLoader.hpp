@@ -22,6 +22,10 @@ namespace sgns
     {
         SINGLETON_PTR(HTTPLoader);
     public:
+        enum class Error
+        {
+            INVALID_URL = 1,
+        };
         static void InitializeSingleton();
 
         /**
