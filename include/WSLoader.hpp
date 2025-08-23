@@ -23,6 +23,10 @@ namespace sgns
     {
         SINGLETON_PTR(WSLoader);
     public:
+        enum class Error
+        {
+            INVALID_URL = 1,
+        };
         static void InitializeSingleton();
 
         /**

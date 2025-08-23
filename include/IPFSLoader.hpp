@@ -28,6 +28,7 @@ namespace sgns
         {
             CANNOT_LISTEN = 1,
             BAD_CID = 2,
+            INVALID_URL = 3,
         };
         static void InitializeSingleton();
 
