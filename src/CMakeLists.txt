@@ -19,8 +19,6 @@ add_library(AsyncIOManager STATIC
 	asiomgr-logger.cpp
     )
 
-add_proto_library(ipfs-unixfs proto/unixfs.proto)
-
 target_link_libraries(AsyncIOManager PRIVATE
 	spdlog::spdlog
 	${Boost_LIBRARIES}
@@ -49,8 +47,8 @@ target_link_libraries(AsyncIOManager PRIVATE
 	ipfs-lite-cpp::ipfs_datastore_rocksdb
 	ipfs-lite-cpp::ipfs_kad_dht
 	ipfs-bitswap-proto
+	ipfs-unixfs-proto
 	ipfs-bitswap-cpp 
-	ipfs-unixfs
 	)
 include_directories(../include )
 

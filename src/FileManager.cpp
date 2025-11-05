@@ -7,6 +7,7 @@
 #include "HTTPLoader.hpp"
 #include "SFTPLoader.hpp"
 #include "WSLoader.hpp"
+#include <bitswap.hpp>
 
 void FileManager::RegisterLoader(const std::string &prefix,
         FileLoader *handlerLoader)
@@ -187,4 +188,21 @@ std::shared_ptr<int> FileManager::GetOutstandingOperationsPointer()
 {
     // Return a shared pointer to the outstandingOperations counter
     return std::make_shared<int>(outstandingOperations_);
+}
+
+void FileManager::setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
+{
+    // Forward bitswap instance to IPFSLoader
+    auto ipfsLoaderIter = loaders.find("ipfs");
+    if (ipfsLoaderIter != loaders.end()) {
+        auto ipfsLoader = dynamic_cast<sgns::IPFSLoader*>(ipfsLoaderIter->second);
+        if (ipfsLoader) {
+            ipfsLoader->setBitswap(bitswap);
+            m_logger->info("Bitswap instance set for IPFS loader");
+        } else {
+            m_logger->warn("IPFS loader found but cast failed");
+        }
+    } else {
+        m_logger->warn("IPFS loader not registered, cannot set bitswap");
+    }
 }

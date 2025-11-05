@@ -112,6 +112,44 @@ namespace sgns
                 });
             return result;
         }
+        
+        // Check if we have an external bitswap instance
+        if (hasExternalBitswap()) {
+            m_logger->info("Using external bitswap instance for IPFS request");
+            
+            // Parse CID
+            auto maybe_cid = libp2p::multi::ContentIdentifierCodec::fromString(ipfs_cid);
+            if (!maybe_cid) {
+                m_logger->error("Bad CID: {}", maybe_cid.error().message());
+                boost::asio::post(*ioc, [handle_read, ioc]() {
+                    handle_read(ioc, outcome::failure(Error::BAD_CID), false, false);
+                });
+                return result;
+            }
+            auto cid = maybe_cid.value();
+            
+            // Create IPFSDevice with external bitswap
+            auto ipfsDeviceResult = IPFSDevice::createWithBitswap(ioc, externalBitswap_);
+            if (!ipfsDeviceResult) {
+                m_logger->error("Failed to create IPFSDevice with external bitswap: {}", ipfsDeviceResult.error().message());
+                boost::asio::post(*ioc, [handle_read, ioc]() {
+                    handle_read(ioc, outcome::failure(Error::CANNOT_LISTEN), false, false);
+                });
+                return result;
+            }
+            auto ipfsDevice = ipfsDeviceResult.value();
+            
+            // Use the device to request the block
+            ioc->post([=] {
+                ipfsDevice->RequestBlockMain(ioc, cid, ipfs_file, 0, parse, save, handle_read);
+            });
+            
+            return result;
+        }
+        
+        // Fall back to IPFSDevice creation (existing behavior)
+        m_logger->info("No external bitswap available, creating IPFSDevice");
+        
         //Create Host
         auto ipfsDeviceResult = IPFSDevice::getInstance(ioc);
         if (!ipfsDeviceResult)
@@ -150,6 +188,17 @@ namespace sgns
             });
         
         return result;
+    }
+
+    void IPFSLoader::setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
+    {
+        externalBitswap_ = bitswap;
+        m_logger->info("External bitswap instance set for IPFS loader");
+    }
+
+    bool IPFSLoader::hasExternalBitswap() const
+    {
+        return externalBitswap_ != nullptr;
     }
 
 } // End namespace sgns

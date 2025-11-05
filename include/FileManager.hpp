@@ -17,6 +17,11 @@
 #include <libp2p/outcome/outcome.hpp>
 #include <asiomgr-logger.hpp>
 
+// Forward declaration for bitswap
+namespace sgns::ipfs_bitswap {
+    class Bitswap;
+}
+
 namespace outcome {
     using libp2p::outcome::result;
     using libp2p::outcome::success;
@@ -108,6 +113,10 @@ class FileManager
         /// @param url URL prefix filename and extension
         /// @param data shared pointer to void * of the data to save
         void SaveFile(const std::string &url, std::shared_ptr<void> data);
+
+        /// @brief Set bitswap instance for IPFS operations
+        /// @param bitswap Shared pointer to existing bitswap instance to reuse
+        void setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
 };
 
 #endif
