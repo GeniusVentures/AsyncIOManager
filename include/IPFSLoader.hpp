@@ -13,6 +13,11 @@
 #include "ipfs_lite/ipfs/impl/ipfs_block_service.hpp"
 #include "ipfs_lite/ipfs/impl/in_memory_datastore.hpp"
 
+// Forward declaration for bitswap
+namespace sgns::ipfs_bitswap {
+    class Bitswap;
+}
+
 
 namespace sgns
 {
@@ -59,8 +64,19 @@ namespace sgns
          * @return String indicating init
          */
         std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback) override;
+
+        /// @brief Set external bitswap instance to reuse existing libp2p host
+        /// @param bitswap Shared pointer to existing bitswap instance
+        void setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
+
+        /// @brief Check if external bitswap is available
+        /// @return True if external bitswap has been set
+        bool hasExternalBitswap() const;
     private:
         sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("IPFSLoader");
+        
+        /// @brief External bitswap instance to reuse existing libp2p host
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> externalBitswap_;
     protected:
 
     };

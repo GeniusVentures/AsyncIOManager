@@ -78,7 +78,6 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_IN
 
 # Install LIB
 install(TARGETS AsyncIOManager
-    ipfs-unixfs
     EXPORT AsyncIOManagerTargets DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 # Install Targets

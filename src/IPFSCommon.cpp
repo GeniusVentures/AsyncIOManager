@@ -17,7 +17,7 @@ namespace sgns
     std::shared_ptr<IPFSDevice> IPFSDevice::instance_;
     std::mutex IPFSDevice::mutex_;
 
-    IPFS::outcome::result<std::shared_ptr<IPFSDevice>> IPFSDevice::getInstance(std::shared_ptr<boost::asio::io_context> ioc) 
+    outcome::result<std::shared_ptr<IPFSDevice>> IPFSDevice::getInstance(std::shared_ptr<boost::asio::io_context> ioc) 
     {
         //Create IPFSDevice if needed
         std::lock_guard<std::mutex> lock(mutex_);
@@ -39,6 +39,20 @@ namespace sgns
         }
 
         return instance_;
+    }
+
+    outcome::result<std::shared_ptr<IPFSDevice>> IPFSDevice::createWithBitswap(
+        std::shared_ptr<boost::asio::io_context> ioc,
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
+    {
+        try {
+            // Create a new IPFSDevice instance (not singleton) with external bitswap
+            auto device = std::shared_ptr<IPFSDevice>(new IPFSDevice(ioc, bitswap));
+            return device;
+        }
+        catch (const std::exception& e) {
+            return outcome::failure(IPFSDevice::Error::CANNOT_DECODE);
+        }
     }
 
     IPFSDevice::IPFSDevice(std::shared_ptr<boost::asio::io_context> ioc) : dhtretry_(*ioc)
@@ -67,6 +81,23 @@ namespace sgns
 
         //Initialize DHT
         dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>(kademlia, bootstrapAddresses_,ioc);
+    }
+
+    IPFSDevice::IPFSDevice(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap) 
+        : dhtretry_(*ioc), bitswap_(bitswap)
+    {
+        // Use external bitswap and its host
+        // Extract host from bitswap (assuming bitswap has a way to get its host)
+        // For now, we'll set host_ to nullptr and rely on bitswap for operations
+        host_ = nullptr;
+        
+        //Initialize address holder
+        peerAddresses_ = std::make_shared<std::vector<libp2p::peer::PeerInfo>>();
+        
+        // No DHT creation since we're using external bitswap
+        dht_ = nullptr;
+        
+        m_logger->info("IPFSDevice created with external bitswap instance");
     }
 
     bool IPFSDevice::StartFindingPeers(
@@ -137,245 +168,99 @@ namespace sgns
         bool save,
         CompletionCallback handle_read)
     {
-        if (addressoffset < peerAddresses_->size())
-        {
-            bitswap_->RequestBlock(peerAddresses_->at(addressoffset), cid,
-                [=](libp2p::outcome::result<std::string> data)
-                {
-                    if (data)
-                    {
-                        auto cidV0 = libp2p::multi::ContentIdentifierCodec::encodeCIDV0(data.value().data(), data.value().size());
-                        auto maincid = libp2p::multi::ContentIdentifierCodec::decode(gsl::span((uint8_t*)cidV0.data(), cidV0.size()));
-
-                        //Convert data content into usable span uint8_t
-                        gsl::span<const uint8_t> byteSpan(
-                            reinterpret_cast<const uint8_t*>(data.value().data()),
-                            data.value().size());
-                        //Create a PB Decoder to handle the data
-                        auto decoder = ipfs_lite::ipld::IPLDNodeDecoderPB();
-                        //Attempt to decode
-                        auto diddecode = decoder.decode(byteSpan);
-                        if (diddecode.has_error())
-                        {
-                            //Handle Error
-                            handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
-                            return false;
-                        }
-                        //Start Adding to list
-                        CIDInfo cidInfo(maincid.value());
-                        for (size_t i = 0; i < decoder.getLinksCount(); ++i) {
-                            auto subcid = libp2p::multi::ContentIdentifierCodec::decode(gsl::span((uint8_t*)decoder.getLinkCID(i).data(), decoder.getLinkCID(i).size()));
-                            auto scid = libp2p::multi::ContentIdentifierCodec::fromString(libp2p::multi::ContentIdentifierCodec::toString(subcid.value()).value()).value();
-                            //If we have a link name, this is a file CID, and not a linked CID for that file
-                            //If we don't have a link name, this is a linked CID. This shouldn't happen here in the main request though.
-                            std::string passfilename = filename;
-                            if (!decoder.getLinkName(i).empty())
-                            {
-                                cidInfo.directories.push_back(decoder.getLinkName(i));
-                                cidInfo.mainCIDs.push_back(subcid.value());
-                                passfilename = decoder.getLinkName(i);
-                            }
-                            else
-                            {
-                                CIDInfo::LinkedCIDInfo linkedCID(subcid.value(), maincid.value(), passfilename);
-                                m_logger->error("add Linked CID: nothing here");
-                                cidInfo.linkedCIDs.push_back(linkedCID); 
-                            }
-                            //Increment Outstanding
-                            cidInfo.outstandingRequests_++;
-                            //Request Additional CID
-                            RequestBlockSub(ioc, cid, cid, scid, passfilename, 0, parse, save, handle_read);
-                        }
-
-                        //Add to list in IPFSDevice
-                        addCID(cidInfo);
-
-                        //If there are no links, this was a single file with 1 block containing all the data, so we can write it out
-                        if (decoder.getLinksCount() <= 0)
-                        {
-                            //Get data, ignoring bytes at beginning or end TODO: need a better way to do this, some contexts the offset is not 6/4.
-                            //auto bindata = std::make_shared<std::vector<char>>(decoder.getContent().begin() + 4, decoder.getContent().end() - 2);
-                            ::unixfs_pb::Data unixfs;
-                            //unixfs.set_data(decoder.getContent());
-                            unixfs.ParseFromString(decoder.getContent());
-                            auto bindata = std::vector<char>(unixfs.data().begin(), unixfs.data().end());
-                            std::string passfilename = filename;
-                            size_t mainindex = findRequestedCIDIndex(cid);
-                            requestedCIDs_[mainindex].finalcontents->first.push_back(passfilename);
-                            requestedCIDs_[mainindex].finalcontents->second.push_back(bindata);
-                            //bool allset = CheckIfAllSet(cid);
-                            if (requestedCIDs_[mainindex].outstandingRequests_ <= 0)
-                            {
-                                requestedCIDs_[mainindex].groupLinkedCIDs();
-                                handle_read(ioc, requestedCIDs_[mainindex].finalcontents, parse, save);
-                            }
-                        }
-                        return true;
-                    }
-                    else
-                    {
-                        return RequestBlockMain(ioc, cid, filename, addressoffset + 1, parse, save, handle_read);
-                    }
-                });
-        }
-        else {
-            handle_read(ioc, outcome::failure(Error::NO_SOURCE), false, false);
+        // Check if we have any peers to connect to
+        if (peerAddresses_->empty()) {
+            m_logger->error("No peer addresses available for request");
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::NO_SOURCE), false, false);
+            });
             return false;
         }
+
+        // Use modern bitswap RequestContent instead of manual block handling
+        if (addressoffset < peerAddresses_->size()) {
+            auto& peerInfo = peerAddresses_->at(addressoffset);
+            
+            m_logger->info("Requesting content for CID: {} from peer: {}", 
+                libp2p::multi::ContentIdentifierCodec::toString(cid).value(),
+                peerInfo.id.toBase58());
+            
+            bitswap_->RequestContent(peerInfo, cid,
+                [=](libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> contentResult) {
+                    if (!contentResult) {
+                        m_logger->error("Failed to retrieve content: {}", contentResult.error().message());
+                        
+                        // Try next peer if available
+                        if (addressoffset + 1 < peerAddresses_->size()) {
+                            m_logger->info("Trying next peer (offset {})", addressoffset + 1);
+                            RequestBlockMain(ioc, cid, filename, addressoffset + 1, parse, save, handle_read);
+                        } else {
+                            // No more peers to try
+                            boost::asio::post(*ioc, [handle_read, ioc]() {
+                                handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
+                            });
+                        }
+                        return;
+                    }
+                    
+                    // Convert UnixFSContent to AsyncIOManager format
+                    auto unixfsContent = contentResult.value();
+                    convertUnixFSContentToResult(ioc, unixfsContent, filename, parse, save, handle_read);
+                }
+            );
+            return true;
+        }
+        
+        m_logger->error("Peer address offset {} out of range (size: {})", addressoffset, peerAddresses_->size());
+        boost::asio::post(*ioc, [handle_read, ioc]() {
+            handle_read(ioc, outcome::failure(Error::NO_SOURCE), false, false);
+        });
         return false;
     }
 
-    bool IPFSDevice::RequestBlockSub(
+    void IPFSDevice::convertUnixFSContentToResult(
         std::shared_ptr<boost::asio::io_context> ioc,
-        const sgns::ipfs_bitswap::CID& cid,
-        const sgns::ipfs_bitswap::CID& parentcid,
-        const sgns::ipfs_bitswap::CID& scid,
-        std::string directory,
-        int addressoffset,
+        const sgns::ipfs_bitswap::UnixFSContent& unixfsContent,
+        const std::string& filename,
         bool parse,
         bool save,
         CompletionCallback handle_read)
     {
-        if (addressoffset < peerAddresses_->size())
-        {
-            bitswap_->RequestBlock(peerAddresses_->at(addressoffset), scid,
-                [=](libp2p::outcome::result<std::string> data)
-                {
-                    if (data)
-                    {
-                        //Get CIDInfo Index
-                        size_t mainindex = findRequestedCIDIndex(cid);
-                        //Decrement 
-                        requestedCIDs_[mainindex].outstandingRequests_--;
-
-
-                        auto cidV0 = libp2p::multi::ContentIdentifierCodec::encodeCIDV0(data.value().data(), data.value().size());
-                        auto maincid = libp2p::multi::ContentIdentifierCodec::decode(gsl::span((uint8_t*)cidV0.data(), cidV0.size()));
-
-                        //Convert data content into usable span uint8_t
-                        gsl::span<const uint8_t> byteSpan(
-                            reinterpret_cast<const uint8_t*>(data.value().data()),
-                            data.value().size());
-
-                        //Create a PB Decoder to handle the data
-                        auto decoder = ipfs_lite::ipld::IPLDNodeDecoderPB();
-                        
-                        
-                        //Attempt to decode
-                        auto diddecode = decoder.decode(byteSpan);
-                        if (diddecode.has_error())
-                        {
-                            //Handle Error
-                            handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
-                            return false;
-                        }
-                        for (size_t i = 0; i < decoder.getLinksCount(); ++i) {
-                            auto subcid = libp2p::multi::ContentIdentifierCodec::decode(gsl::span((uint8_t*)decoder.getLinkCID(i).data(), decoder.getLinkCID(i).size()));
-                            auto sscid = libp2p::multi::ContentIdentifierCodec::fromString(libp2p::multi::ContentIdentifierCodec::toString(subcid.value()).value()).value();
-                            std::string newdir = directory + "/" + decoder.getLinkName(i);
-                            if (!decoder.getLinkName(i).empty())
-                            {
-                                requestedCIDs_[mainindex].directories.push_back(newdir);
-                                requestedCIDs_[mainindex].mainCIDs.push_back(subcid.value());
-                            }
-                            else {
-                                newdir = directory;
-                                CIDInfo::LinkedCIDInfo linkedCID(subcid.value(), scid, newdir);
-                                requestedCIDs_[mainindex].linkedCIDs.push_back(linkedCID);
-                            }
-                            requestedCIDs_[mainindex].outstandingRequests_++;
-                            RequestBlockSub(ioc, cid, scid, sscid, newdir, 0, parse, save, handle_read);
-                        }
-                        //If there are no links, this block is complete and we can see if we have all blocks for writing
-                        if (decoder.getLinksCount() <= 0)
-                        {
-                            //Get data, ignoring bytes at beginning or end TODO: need a better way to do this, some contexts the offset is not 6/4.
-                            ::unixfs_pb::Data unixfs;
-                            unixfs.ParseFromString(decoder.getContent());
-                            auto bindata = std::vector<char>(unixfs.data().begin(), unixfs.data().end());
-                            //Set Content for linked CID, or otherwise push data to final contents if it has none
-                            bool setsubdata = setContentForLinkedCID(cid, scid, bindata);
-                            if (!setsubdata)
-                            {
-                                requestedCIDs_[mainindex].finalcontents->first.push_back(directory);
-                                requestedCIDs_[mainindex].finalcontents->second.push_back(bindata);
-                            }
-                            //bool allset = CheckIfAllSet(cid);
-                            if (requestedCIDs_[mainindex].outstandingRequests_ <= 0)
-                            {
-                                requestedCIDs_[mainindex].groupLinkedCIDs();
-                                //requestedCIDs_[mainindex].writeFinalContentsToDirectories();
-                                handle_read(ioc, requestedCIDs_[mainindex].finalcontents, parse, save);
-                            }
-                        }
-
-
-                        return true;
-                    }
-                    else
-                    {
-                        //Request Block on next address
-                        return RequestBlockSub(ioc, cid, parentcid, scid, directory, addressoffset + 1, parse, save, handle_read);
-                    }
-                });
-        }
-        return false;
-    }
-
-    bool IPFSDevice::setContentForLinkedCID(const sgns::ipfs_bitswap::CID& mainCID,
-        const sgns::ipfs_bitswap::CID& linkedCID,
-        const std::vector<char>& content)
-    {
-        auto it = std::find_if(requestedCIDs_.begin(), requestedCIDs_.end(),
-            [&mainCID](const CIDInfo& info) {
-                return info.mainCID == mainCID;
+        try {
+            // Convert UnixFSContent to the expected AsyncIOManager format
+            auto paths = std::make_shared<std::vector<std::string>>();
+            auto contents = std::make_shared<std::vector<std::vector<char>>>();
+            
+            if (unixfsContent.type == sgns::ipfs_bitswap::UnixFSContent::SINGLE_FILE) {
+                // Single file case
+                if (!unixfsContent.files.empty()) {
+                    paths->push_back(filename.empty() ? unixfsContent.files[0].path : filename);
+                    contents->push_back(unixfsContent.files[0].content);
+                }
+            } else {
+                // Directory or multi-file archive case
+                for (const auto& file : unixfsContent.files) {
+                    paths->push_back(file.path);
+                    contents->push_back(file.content);
+                }
+            }
+            
+            auto result = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(
+                std::make_pair(*paths, *contents));
+            
+            m_logger->info("Successfully converted UnixFS content: {} files, total size: {}",
+                paths->size(), unixfsContent.metadata.count("total_size") ? unixfsContent.metadata.at("total_size") : "unknown");
+            
+            boost::asio::post(*ioc, [handle_read, ioc, result, parse, save]() {
+                handle_read(ioc, outcome::success(result), parse, save);
             });
-
-        if (it != requestedCIDs_.end())
-        {
-            // Update the content for the linked CID within the found CIDInfo
-            return it->setContentForLinkedCID(linkedCID, content);
-        }
-        return false;
-    }
-
-    bool IPFSDevice::CheckIfAllSet(const sgns::ipfs_bitswap::CID& mainCID)
-    {
-        auto it = std::find_if(requestedCIDs_.begin(), requestedCIDs_.end(),
-            [&mainCID](const CIDInfo& info) {
-                return info.mainCID == mainCID;
+            
+        } catch (const std::exception& e) {
+            m_logger->error("Error converting UnixFS content: {}", e.what());
+            boost::asio::post(*ioc, [handle_read, ioc, parse, save]() {
+                handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), parse, save);
             });
-        if (it != requestedCIDs_.end())
-        {
-            return it->allLinkedCIDsHaveContent();
         }
-        return false;
-    }
-
-    std::shared_ptr<std::vector<char>> IPFSDevice::combineLinkedCIDs(const sgns::ipfs_bitswap::CID& mainCID)
-    {
-        auto it = std::find_if(requestedCIDs_.begin(), requestedCIDs_.end(),
-            [&mainCID](const CIDInfo& info) {
-                return info.mainCID == mainCID;
-            });
-        auto combinedContent = std::make_shared<std::vector<char>>();
-        if (it != requestedCIDs_.end())
-        {
-            // Get the combined content
-            combinedContent = it->combineContents();
-        }
-        return combinedContent;
-    }
-
-    size_t IPFSDevice::addCID(CIDInfo& cidInfo)
-    {
-        // Acquire lock to safely modify the list
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        // Add the CIDInfo to the list
-        requestedCIDs_.push_back(std::move(cidInfo));
-
-        return requestedCIDs_.size() - 1;
     }
 
     void IPFSDevice::addAddress(
