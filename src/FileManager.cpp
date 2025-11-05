@@ -205,4 +205,18 @@ void FileManager::setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswa
     } else {
         m_logger->warn("IPFS loader not registered, cannot set bitswap");
     }
+    
+    // Forward bitswap instance to IPFSSaver
+    auto ipfsSaverIter = savers.find("ipfs");
+    if (ipfsSaverIter != savers.end()) {
+        auto ipfsSaver = dynamic_cast<sgns::IPFSSaver*>(ipfsSaverIter->second);
+        if (ipfsSaver) {
+            ipfsSaver->setBitswap(bitswap);
+            m_logger->info("Bitswap instance set for IPFS saver");
+        } else {
+            m_logger->warn("IPFS saver found but cast failed");
+        }
+    } else {
+        m_logger->warn("IPFS saver not registered, cannot set bitswap");
+    }
 }
