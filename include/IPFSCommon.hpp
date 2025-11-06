@@ -141,13 +141,24 @@ namespace sgns
 			CompletionCallback handle_read);
 
 		/**
-		 * Add an address to pool of addresses to try to get file using IPFS bitswap
-		 * @param address - libp2p multiaddress to add to pool /ip4/127.0.0.1/tcp/4001/p2p/CID format
+		 * Add a peer address for a specific CID
+		 * @param cid - content identifier
+		 * @param address - libp2p multiaddress to add for this CID
 		 */
 		void addAddress(
-			libp2p::multi::Multiaddress address
+			const sgns::ipfs_bitswap::CID& cid,
+			const libp2p::multi::Multiaddress& address
 		);
-		void addAddresses(const std::vector<libp2p::peer::PeerInfo>& addresses);
+		
+		/**
+		 * Add multiple peer addresses for a specific CID
+		 * @param cid - content identifier
+		 * @param addresses - vector of multiaddresses
+		 */
+		void addAddresses(
+			const sgns::ipfs_bitswap::CID& cid,
+			const std::vector<libp2p::multi::Multiaddress>& addresses
+		);
 
 	private:
 		/**
@@ -190,8 +201,6 @@ namespace sgns
 		std::shared_ptr<libp2p::Host> host_;
 		std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_;
 		boost::asio::deadline_timer dhtretry_;
-		//std::shared_ptr<std::vector<libp2p::multi::Multiaddress>> peerAddresses_;
-		std::shared_ptr<std::vector<libp2p::peer::PeerInfo>> peerAddresses_;
 
 		//Default Bootstrap Servers
 		std::vector<std::string> bootstrapAddresses_ = {

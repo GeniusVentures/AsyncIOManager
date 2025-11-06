@@ -71,8 +71,6 @@ namespace sgns
 
         // Initialize Bitswap using the created host
         bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>(*host_, host_->getBus(), ioc);
-        //Initialize address holder
-        peerAddresses_ = std::make_shared<std::vector<libp2p::peer::PeerInfo>>();
 
         //Create Kademlia
         auto kademlia =
@@ -90,9 +88,6 @@ namespace sgns
         // Extract host from bitswap (assuming bitswap has a way to get its host)
         // For now, we'll set host_ to nullptr and rely on bitswap for operations
         host_ = nullptr;
-        
-        //Initialize address holder
-        peerAddresses_ = std::make_shared<std::vector<libp2p::peer::PeerInfo>>();
         
         // No DHT creation since we're using external bitswap
         dht_ = nullptr;
@@ -168,54 +163,25 @@ namespace sgns
         bool save,
         CompletionCallback handle_read)
     {
-        // Check if we have any peers to connect to
-        if (peerAddresses_->empty()) {
-            m_logger->error("No peer addresses available for request");
-            boost::asio::post(*ioc, [handle_read, ioc]() {
-                handle_read(ioc, outcome::failure(Error::NO_SOURCE), false, false);
-            });
-            return false;
-        }
-
-        // Use modern bitswap RequestContent instead of manual block handling
-        if (addressoffset < peerAddresses_->size()) {
-            auto& peerInfo = peerAddresses_->at(addressoffset);
-            
-            m_logger->info("Requesting content for CID: {} from peer: {}", 
-                libp2p::multi::ContentIdentifierCodec::toString(cid).value(),
-                peerInfo.id.toBase58());
-            
-            bitswap_->RequestContent(peerInfo, cid,
-                [=](libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> contentResult) {
-                    if (!contentResult) {
-                        m_logger->error("Failed to retrieve content: {}", contentResult.error().message());
-                        
-                        // Try next peer if available
-                        if (addressoffset + 1 < peerAddresses_->size()) {
-                            m_logger->info("Trying next peer (offset {})", addressoffset + 1);
-                            RequestBlockMain(ioc, cid, filename, addressoffset + 1, parse, save, handle_read);
-                        } else {
-                            // No more peers to try
-                            boost::asio::post(*ioc, [handle_read, ioc]() {
-                                handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
-                            });
-                        }
-                        return;
-                    }
-                    
-                    // Convert UnixFSContent to AsyncIOManager format
-                    auto unixfsContent = contentResult.value();
-                    convertUnixFSContentToResult(ioc, unixfsContent, filename, parse, save, handle_read);
-                }
-            );
-            return true;
-        }
+        m_logger->info("Requesting content for CID: {}", 
+            libp2p::multi::ContentIdentifierCodec::toString(cid).value());
         
-        m_logger->error("Peer address offset {} out of range (size: {})", addressoffset, peerAddresses_->size());
-        boost::asio::post(*ioc, [handle_read, ioc]() {
-            handle_read(ioc, outcome::failure(Error::NO_SOURCE), false, false);
-        });
-        return false;
+        bitswap_->RequestContent(cid,
+            [=](libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> contentResult) {
+                if (!contentResult) {
+                    m_logger->error("Failed to retrieve content: {}", contentResult.error().message());
+                    boost::asio::post(*ioc, [handle_read, ioc]() {
+                        handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
+                    });
+                    return;
+                }
+                
+                // Convert UnixFSContent to AsyncIOManager format
+                auto unixfsContent = contentResult.value();
+                convertUnixFSContentToResult(ioc, unixfsContent, filename, parse, save, handle_read);
+            }
+        );
+        return true;
     }
 
     void IPFSDevice::convertUnixFSContentToResult(
@@ -264,20 +230,66 @@ namespace sgns
     }
 
     void IPFSDevice::addAddress(
-        libp2p::multi::Multiaddress address
+        const sgns::ipfs_bitswap::CID& cid,
+        const libp2p::multi::Multiaddress& address
     )
     {
-        std::vector<libp2p::multi::Multiaddress> addresses;
-        addresses.push_back(address);
-        auto peerId = libp2p::peer::PeerId::fromBase58(address.getPeerId().value());
-        auto peerInfo = sgns::Peer{
-            libp2p::peer::PeerInfo{peerId.value(), std::move(addresses)}
-        };
-        peerAddresses_->push_back(peerInfo.info);
+        // Extract peer ID from multiaddress
+        auto peer_id_bytes = address.getPeerId();
+        if (!peer_id_bytes) {
+            m_logger->error("Failed to extract peer ID from multiaddress: {}", address.getStringAddress());
+            return;
+        }
+        
+        auto peer_id = libp2p::peer::PeerId::fromBase58(peer_id_bytes.value());
+        if (!peer_id) {
+            m_logger->error("Failed to create PeerID from base58 string");
+            return;
+        }
+        
+        // Create PeerInfo with constructor
+        libp2p::peer::PeerInfo peerInfo{peer_id.value(), {address}};
+        
+        // Add provider to bitswap
+        bitswap_->AddProvider(cid, peerInfo);
+        
+        m_logger->info("Added provider for CID: {}, Peer: {}", 
+            libp2p::multi::ContentIdentifierCodec::toString(cid).value(),
+            peerInfo.id.toBase58());
     }
 
-    void IPFSDevice::addAddresses(const std::vector<libp2p::peer::PeerInfo>& addresses) {
-        peerAddresses_->insert(peerAddresses_->end(), addresses.begin(), addresses.end());
+    void IPFSDevice::addAddresses(
+        const sgns::ipfs_bitswap::CID& cid,
+        const std::vector<libp2p::multi::Multiaddress>& addresses
+    ) 
+    {
+        std::vector<libp2p::peer::PeerInfo> peerInfos;
+        
+        for (const auto& address : addresses) {
+            // Extract peer ID from multiaddress
+            auto peer_id_bytes = address.getPeerId();
+            if (!peer_id_bytes) {
+                m_logger->warn("Failed to extract peer ID from multiaddress: {}", address.getStringAddress());
+                continue;
+            }
+            
+            auto peer_id = libp2p::peer::PeerId::fromBase58(peer_id_bytes.value());
+            if (!peer_id) {
+                m_logger->warn("Failed to create PeerID from base58 for address: {}", address.getStringAddress());
+                continue;
+            }
+            
+            // Create PeerInfo with constructor
+            libp2p::peer::PeerInfo peerInfo{peer_id.value(), {address}};
+            peerInfos.push_back(peerInfo);
+        }
+        
+        // Add all providers to bitswap
+        bitswap_->AddProviders(cid, peerInfos);
+        
+        m_logger->info("Added {} providers for CID: {}", 
+            peerInfos.size(),
+            libp2p::multi::ContentIdentifierCodec::toString(cid).value());
     }
 
     std::shared_ptr<sgns::ipfs_bitswap::Bitswap> IPFSDevice::getBitswap() const {
