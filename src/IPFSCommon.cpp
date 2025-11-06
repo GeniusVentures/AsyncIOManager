@@ -115,7 +115,14 @@ namespace sgns
             auto& providers = res.value();
             if (!providers.empty())
             {
-                addAddresses(providers);
+                // Convert PeerInfo vector to Multiaddress vector and add providers for this CID
+                std::vector<libp2p::multi::Multiaddress> addresses;
+                for (const auto& provider : providers) {
+                    if (!provider.addresses.empty()) {
+                        addresses.insert(addresses.end(), provider.addresses.begin(), provider.addresses.end());
+                    }
+                }
+                addAddresses(cid, addresses);
                 
                 return RequestBlockMain(ioc, cid, filename, 0, parse, save, handle_read);
             }
