@@ -173,10 +173,12 @@ namespace sgns
         m_logger->info("Requesting content for CID: {}", 
             libp2p::multi::ContentIdentifierCodec::toString(cid).value());
         
+        // Capture shared_ptr to keep this object alive during callback
+        auto self = shared_from_this();
         bitswap_->RequestContent(cid,
-            [=](libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> contentResult) {
+            [self, ioc, filename, parse, save, handle_read](libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> contentResult) {
                 if (!contentResult) {
-                    m_logger->error("Failed to retrieve content: {}", contentResult.error().message());
+                    self->m_logger->error("Failed to retrieve content: {}", contentResult.error().message());
                     boost::asio::post(*ioc, [handle_read, ioc]() {
                         handle_read(ioc, outcome::failure(Error::CANNOT_DECODE), false, false);
                     });
@@ -185,7 +187,7 @@ namespace sgns
                 
                 // Convert UnixFSContent to AsyncIOManager format
                 auto unixfsContent = contentResult.value();
-                convertUnixFSContentToResult(ioc, unixfsContent, filename, parse, save, handle_read);
+                self->convertUnixFSContentToResult(ioc, unixfsContent, filename, parse, save, handle_read);
             }
         );
         return true;
@@ -221,8 +223,12 @@ namespace sgns
             auto result = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(
                 std::make_pair(*paths, *contents));
             
-            m_logger->info("Successfully converted UnixFS content: {} files, total size: {}",
-                paths->size(), unixfsContent.metadata.count("total_size") ? unixfsContent.metadata.at("total_size") : "unknown");
+            std::string totalSize = "unknown";
+            if (unixfsContent.metadata.count("total_size") > 0) {
+                totalSize = unixfsContent.metadata.at("total_size");
+            }
+            m_logger->info("Successfully converted UnixFS content: {} files, total size: {}", 
+                static_cast<size_t>(paths->size()), totalSize);
             
             boost::asio::post(*ioc, [handle_read, ioc, result, parse, save]() {
                 handle_read(ioc, outcome::success(result), parse, save);

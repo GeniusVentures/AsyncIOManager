@@ -48,7 +48,7 @@ namespace sgns
 	 * This class creates an IPFS Device and has a function to download
 	 * from an IPFS node(s).
 	 */
-	class IPFSDevice {
+	class IPFSDevice : public std::enable_shared_from_this<IPFSDevice> {
 	public:
 		enum class Error
 		{

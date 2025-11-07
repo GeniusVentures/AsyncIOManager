@@ -178,7 +178,7 @@ namespace sgns
         auto cid = maybe_cid.value();
         
         // Add addresses for this specific CID
-        ipfsDevice->addAddress(cid, libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWFMdNiBFk5ojGNzWjqSTL1HGLu8rXns5kwqUPTrbFNtEN").value());
+        ipfsDevice->addAddress(cid, libp2p::multi::Multiaddress::create("/ip4/192.168.46.124/tcp/4001/p2p/12D3KooWHsD2QEUS5FzHEyq2bTuwMSEuEvV86wVAc7VaDDKK1NwJ").value());
         ioc->post([=] {
             ipfsDevice->RequestBlockMain(ioc, cid, ipfs_file, 0, parse, save, handle_read);
             //ipfsDevice->StartFindingPeers(ioc, cid, ipfs_file, 0, parse, save, handle_read, status);
