@@ -245,7 +245,7 @@ groups:
         FileManager::GetInstance().LoadASync(
             file_names[i], 
             false,  // don't parse 
-            true,   // use IPFS
+            true,  // don't save - just load
             ioc, 
             [file_name = file_names[i]](auto buffers) {
                 if (buffers) {
@@ -254,7 +254,7 @@ groups:
                     std::cout << "Failed to load " << file_name << ": " << buffers.error().message() << std::endl;
                 }
             },
-            "file"
+            "ipfs"  // use file handler, not ipfs saver
         );
     }
     
