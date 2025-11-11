@@ -7,6 +7,7 @@
 #include <boost/asio.hpp>
 #include "FileManager.hpp"
 #include "IPFSSaver.hpp"
+#include "URLStringUtil.h"
 #include "libp2p/multi/content_identifier_codec.hpp"
 
 namespace sgns
@@ -43,7 +44,9 @@ namespace sgns
                               ResultType data, 
                               std::string suffix) 
     {
-        m_logger->info("Publishing content to IPFS via bitswap for: {}", filename);
+        // Note: For IPFS, we ignore the filename path component (e.g., /test) and 
+        // republish the content structure as-is to preserve the original CID
+        m_logger->info("Publishing content to IPFS via bitswap (ignoring path component from: {})", filename);
         
         if (!data.has_value() || !data.value() || data.value()->first.empty()) {
             m_logger->error("Cannot save with null or empty data");
@@ -125,30 +128,40 @@ namespace sgns
             }
             
         } else {
-            // Multi-file publishing (create temporary directory structure)
-            auto tempDir = std::filesystem::temp_directory_path() / ("ipfs_temp_dir_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-            std::string tempDirPath = tempDir.string();
+            // Multi-file publishing - match bitswap test approach exactly
+            std::string tempDirPath = "ipfs_temp_publish";
             
             try {
+                // Clean up any existing temp directory (like bitswap test)
+                if (std::filesystem::exists(tempDirPath)) {
+                    std::filesystem::remove_all(tempDirPath);
+                }
+                
+                // Create the directory structure (like bitswap test)
                 std::filesystem::create_directories(tempDirPath);
                 
-                // Write all files to temporary directory
+                // Recreate the original directory structure directly (without proctestipfs4 wrapper)
                 for (size_t i = 0; i < filePaths.size(); ++i) {
-                    std::filesystem::path fullPath = std::filesystem::path(tempDirPath) / filePaths[i];
-                    std::filesystem::create_directories(fullPath.parent_path());
+                    std::filesystem::path file_path = std::filesystem::path(tempDirPath) / filePaths[i];
                     
-                    std::ofstream tempFile(fullPath, std::ios::binary);
-                    if (!tempFile.is_open()) {
-                        m_logger->error("Failed to create temporary file: {}", fullPath.string());
+                    // Create parent directories if needed (like bitswap test)
+                    std::filesystem::create_directories(file_path.parent_path());
+                    
+                    // Write file content (like bitswap test)
+                    std::ofstream ofs(file_path, std::ios::binary);
+                    if (!ofs) {
+                        m_logger->error("Failed to create file: {}", file_path.string());
                         continue;
                     }
+                    ofs.write(fileContents[i].data(), fileContents[i].size());
+                    ofs.close();
                     
-                    tempFile.write(fileContents[i].data(), fileContents[i].size());
-                    tempFile.close();
+                    m_logger->debug("Created file: {}", file_path.string());
                 }
                 
                 m_logger->info("Publishing directory with {} files", filePaths.size());
                 
+                // Publish the temp directory directly (contains the root structure)
                 externalBitswap_->PublishDirectory(tempDirPath,
                     [=](libp2p::outcome::result<sgns::ipfs_bitswap::CID> result) {
                         // Clean up temporary directory
