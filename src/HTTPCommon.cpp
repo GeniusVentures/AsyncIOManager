@@ -114,7 +114,7 @@ namespace sgns
         CompletionCallback handle_read)
     {
         //Create HTTP Get request and write to server
-        std::string get_request = "GET " + http_path_ + " HTTP/1.1\r\nHost: " + http_host_ + "\r\nConnection: close\r\n\r\n";
+        std::string get_request = "GET " + http_path_ + " HTTP/1.1\r\nHost: " + http_host_ + "\r\nUser-Agent: GeniusAI/1.0 (SGNS AsyncIO Manager)\r\nConnection: close\r\n\r\n";
         boost::asio::async_write(*socket, boost::asio::buffer(get_request), [self = shared_from_this(), ioc, handle_read, socket](const boost::system::error_code& write_error, std::size_t) {
             if (!write_error) {
                 //Create a buffer for returned data and read from server
