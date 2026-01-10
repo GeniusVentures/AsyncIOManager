@@ -15,7 +15,19 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/protocol/ping/ping.hpp>
 
-
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns, IPFSLoader::Error, e)
+{
+    switch (e)
+    {
+    case sgns::IPFSLoader::Error::CANNOT_LISTEN:
+        return "Cannot listen on address";
+    case sgns::IPFSLoader::Error::BAD_CID:
+        return "IPFS CID is invalid";
+    case sgns::IPFSLoader::Error::INVALID_URL:
+        return "Invalid URL";
+    }
+    return "Unknown error";
+}
 
 namespace sgns
 {
@@ -73,7 +85,7 @@ namespace sgns
     # ----------------
       )");
 
-    std::shared_ptr<void> IPFSLoader::LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read, StatusCallback status)
+    std::shared_ptr<void> IPFSLoader::LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read)
     {
         auto logging_system = std::make_shared<soralog::LoggingSystem>(
             std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -93,38 +105,97 @@ namespace sgns
         //Get CID and Filename
         std::string ipfs_cid;
         std::string ipfs_file;
-        parseIPFSUrl(filename, ipfs_cid, ipfs_file);
-        //std::cout << "IPFS Parse" << ipfs_cid << std::endl;
-        //std::cout << "IPFS Parse" << ipfs_file << std::endl;
+        if (!parseIPFSUrl(filename, ipfs_cid, ipfs_file))
+        {
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::INVALID_URL), false, false);
+                });
+            return result;
+        }
+        
+        // Check if we have an external bitswap instance
+        if (hasExternalBitswap()) {
+            m_logger->info("Using external bitswap instance for IPFS request");
+            
+            // Parse CID
+            auto maybe_cid = libp2p::multi::ContentIdentifierCodec::fromString(ipfs_cid);
+            if (!maybe_cid) {
+                m_logger->error("Bad CID: {}", maybe_cid.error().message());
+                boost::asio::post(*ioc, [handle_read, ioc]() {
+                    handle_read(ioc, outcome::failure(Error::BAD_CID), false, false);
+                });
+                return result;
+            }
+            auto cid = maybe_cid.value();
+            
+            // Create IPFSDevice with external bitswap
+            auto ipfsDeviceResult = IPFSDevice::createWithBitswap(ioc, externalBitswap_);
+            if (!ipfsDeviceResult) {
+                m_logger->error("Failed to create IPFSDevice with external bitswap: {}", ipfsDeviceResult.error().message());
+                boost::asio::post(*ioc, [handle_read, ioc]() {
+                    handle_read(ioc, outcome::failure(Error::CANNOT_LISTEN), false, false);
+                });
+                return result;
+            }
+            auto ipfsDevice = ipfsDeviceResult.value();
+            
+            // Use the device to request the block
+            ioc->post([=] {
+                ipfsDevice->RequestBlockMain(ioc, cid, ipfs_file, 0, parse, save, handle_read);
+            });
+            
+            return result;
+        }
+        
+        // Fall back to IPFSDevice creation (existing behavior)
+        m_logger->info("No external bitswap available, creating IPFSDevice");
+        
         //Create Host
         auto ipfsDeviceResult = IPFSDevice::getInstance(ioc);
         if (!ipfsDeviceResult)
         {   
             //Error Listening
-            status(CustomResult(sgns::AsyncError::outcome::failure("Bitswap failed, cannot listen on address")));
-            std::cerr << "Cannot listen address " << ". Error: " << ipfsDeviceResult.error().message() << std::endl;
-            handle_read(ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(), false, false);
+            m_logger->error("Cannot listen to address: {}", ipfsDeviceResult.error().message());
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::CANNOT_LISTEN), false, false);
+                });
             return result;
         }
         auto ipfsDevice = ipfsDeviceResult.value();
         //auto ma = libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/40000").value();
         //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/ip4/3.92.45.153/tcp/4001/p2p/12D3KooWP6R6XVCBK7t76o8VDwZdxpzAqVeDtHYQNmntP2y8NHvK").value());
-        ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWFMdNiBFk5ojGNzWjqSTL1HGLu8rXns5kwqUPTrbFNtEN").value());
-        //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/fra1-1.hostnodes.pinata.cloud/ipfs/QmWaik1eJcGHq1ybTWe7sezRfqKNcDRNkeBaLnGwQJz1Cj").value());
-        //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/fra1-2.hostnodes.pinata.cloud/ipfs/QmNfpLrQQZr5Ns9FAJKpyzgnDL2GgC6xBug1yUZozKFgu4").value());
-        //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/fra1-3.hostnodes.pinata.cloud/ipfs/QmPo1ygpngghu5it8u4Mr3ym6SEU2Wp2wA66Z91Y1S1g29").value());
-        //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/nyc1-1.hostnodes.pinata.cloud/ipfs/QmRjLSisUCHVpFa5ELVvX3qVPfdxajxWJEHs9kN3EcxAW6").value());
-        //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/nyc1-2.hostnodes.pinata.cloud/ipfs/QmPySsdmbczdZYBpbi2oq2WMJ8ErbfxtkG8Mo192UHkfGP").value());
-        //ipfsDevice->addAddress(libp2p::multi::Multiaddress::create("/dnsaddr/nyc1-3.hostnodes.pinata.cloud/ipfs/QmSarArpxemsPESa6FNkmuu9iSE1QWqPX2R3Aw6f5jq4D5").value());
+        
         //CID of File
-        auto cid = libp2p::multi::ContentIdentifierCodec::fromString(ipfs_cid).value();
-        status(CustomResult(sgns::AsyncError::outcome::success(Success{ "Starting IPFS Bitswap" })));
+        auto maybe_cid = libp2p::multi::ContentIdentifierCodec::fromString(ipfs_cid);
+        if (!maybe_cid)
+        {
+            m_logger->error("Bad CID: {}", maybe_cid.error().message());
+            boost::asio::post(*ioc, [handle_read, ioc]() {
+                handle_read(ioc, outcome::failure(Error::BAD_CID), false, false);
+                });
+            return result;
+        }
+        auto cid = maybe_cid.value();
+        
+        // Add addresses for this specific CID
+        ipfsDevice->addAddress(cid, libp2p::multi::Multiaddress::create("/ip4/192.168.46.124/tcp/4001/p2p/12D3KooWHsD2QEUS5FzHEyq2bTuwMSEuEvV86wVAc7VaDDKK1NwJ").value());
         ioc->post([=] {
-            ipfsDevice->RequestBlockMain(ioc, cid, ipfs_file, 0, parse, save, handle_read, status);
+            ipfsDevice->RequestBlockMain(ioc, cid, ipfs_file, 0, parse, save, handle_read);
             //ipfsDevice->StartFindingPeers(ioc, cid, ipfs_file, 0, parse, save, handle_read, status);
             });
         
         return result;
+    }
+
+    void IPFSLoader::setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
+    {
+        externalBitswap_ = bitswap;
+        m_logger->info("External bitswap instance set for IPFS loader");
+    }
+
+    bool IPFSLoader::hasExternalBitswap() const
+    {
+        return externalBitswap_ != nullptr;
     }
 
 } // End namespace sgns

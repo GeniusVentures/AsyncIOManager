@@ -9,9 +9,6 @@
 #include "FileLoader.hpp"
 #include "MNNCommon.hpp"
 #include "ASIOSingleton.hpp"
-#include "FILEError.hpp"
-using Success = sgns::AsyncError::Success;
-using CustomResult = sgns::AsyncError::CustomResult;
 
 
 namespace sgns
@@ -24,6 +21,11 @@ namespace sgns
     {
         SINGLETON_PTR(MNNLoader);
         public:
+            enum class Error
+            {
+                READ_ERROR = 1,
+                FILE_OPEN_FAIL = 2,
+            };
             static void InitializeSingleton();
  
             /**
@@ -33,12 +35,8 @@ namespace sgns
              * @param parse - Whether to parse file upon completion (for MNN)
              * @param save - Whether to save the file to local disk upon completion
              */
-            using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save)>;
-            /**
-             * Status callback returns an error code as an async load proceeds
-             * @param int - Status code
-             */
-            using StatusCallback = std::function<void(const CustomResult&)>;
+            using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
+
             /**ok
              * Load Data on the MNN file
              * @param filename - MNN file part
@@ -56,7 +54,9 @@ namespace sgns
              * @param status - Status function that will be updated with status codes as operation progresses
              * @return String indicating init
              */
-            std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback, StatusCallback status) override;
+            std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback) override;
+        private:
+            sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("MNNLoader");
         protected:
 
     };

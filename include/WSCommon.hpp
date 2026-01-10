@@ -14,9 +14,14 @@
 #include "boost/beast.hpp"
 #include "boost/asio.hpp"
 #include "URLStringUtil.h"
-#include "FILEError.hpp"
-using Success = sgns::AsyncError::Success;
-using CustomResult = sgns::AsyncError::CustomResult;
+#include <libp2p/outcome/outcome.hpp>
+#include <asiomgr-logger.hpp>
+
+namespace outcome {
+	using libp2p::outcome::result;
+	using libp2p::outcome::success;
+	using libp2p::outcome::failure;
+}
 
 
 namespace sgns
@@ -28,6 +33,15 @@ namespace sgns
 	*/
 	class WSDevice : public std::enable_shared_from_this<WSDevice> {
 	public:
+		enum class Error
+		{
+			COULD_NOT_RESOLVE = 1,
+			HANDSHAKE_ERROR = 2,
+			CONNECT_ERROR = 3,
+			NO_EOF = 4,
+			WS_HANDSHAKE_ERROR = 5,
+		};
+		using ResultType = outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>>;
 		/**
 		 * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
 		 * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
@@ -35,12 +49,8 @@ namespace sgns
 		 * @param parse - Whether to parse file upon completion (for MNN)
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
-		using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save)>;
-		/**
-		 * Status callback returns an error code as an async load proceeds
-		 * @param int - Status code
-		 */
-		using StatusCallback = std::function<void(const CustomResult&)>;
+		using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
+
 
 		/**
 		 * Create an WS Device to load a file from WS.
@@ -64,7 +74,7 @@ namespace sgns
 		 * @param handle_read - Filemanager callback on completion
 		 * @param status - Status function that will be updated with status codes as operation progresses
 		 */
-		void StartWSDownload(std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read, StatusCallback status);
+		void StartWSDownload(std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read);
 	private:
 		/**
 		 * Post WS GET_FILE to download file
@@ -75,9 +85,9 @@ namespace sgns
 		 */
 		void StartWSGet(std::shared_ptr<boost::asio::io_context> ioc,
 			std::shared_ptr<boost::beast::websocket::stream<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>> ws,
-			CompletionCallback handle_read,
-			StatusCallback status);
+			CompletionCallback handle_read);
 
+		sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("WSCommon");
 		//Common vars used for getting file from SFTP
 		std::string ws_host_;
 		std::string ws_path_;

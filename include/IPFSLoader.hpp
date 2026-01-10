@@ -12,9 +12,11 @@
 #include "ASIOSingleton.hpp"
 #include "ipfs_lite/ipfs/impl/ipfs_block_service.hpp"
 #include "ipfs_lite/ipfs/impl/in_memory_datastore.hpp"
-#include "FILEError.hpp"
-using Success = sgns::AsyncError::Success;
-using CustomResult = sgns::AsyncError::CustomResult;
+
+// Forward declaration for bitswap
+namespace sgns::ipfs_bitswap {
+    class Bitswap;
+}
 
 
 namespace sgns
@@ -27,6 +29,12 @@ namespace sgns
     {
         SINGLETON_PTR(IPFSLoader);
     public:
+        enum class Error
+        {
+            CANNOT_LISTEN = 1,
+            BAD_CID = 2,
+            INVALID_URL = 3,
+        };
         static void InitializeSingleton();
 
         /**
@@ -36,12 +44,8 @@ namespace sgns
          * @param parse - Whether to parse file upon completion (for MNN)
          * @param save - Whether to save the file to local disk upon completion
          */
-        using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save)>;
-        /**
-         * Status callback returns an error code as an async load proceeds
-         * @param int - Status code
-         */
-        using StatusCallback = std::function<void(const CustomResult&)>;
+        using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
+
         /**ok
          * Load Data on the MNN file
          * @param filename - MNN file part
@@ -59,7 +63,20 @@ namespace sgns
          * @param status - Status function that will be updated with status codes as operation progresses
          * @return String indicating init
          */
-        std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback, StatusCallback status) override;
+        std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback) override;
+
+        /// @brief Set external bitswap instance to reuse existing libp2p host
+        /// @param bitswap Shared pointer to existing bitswap instance
+        void setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
+
+        /// @brief Check if external bitswap is available
+        /// @return True if external bitswap has been set
+        bool hasExternalBitswap() const;
+    private:
+        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("IPFSLoader");
+        
+        /// @brief External bitswap instance to reuse existing libp2p host
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> externalBitswap_;
     protected:
 
     };

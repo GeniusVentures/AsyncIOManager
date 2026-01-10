@@ -16,6 +16,11 @@ namespace sgns
         SINGLETON_PTR(MNNSaver)
             ;
         public:
+            enum class Error
+            {
+                READ_ERROR = 1,
+                FILE_OPEN_FAIL = 2,
+            };
             static void InitializeSingleton();
             /// @brief save a file to ipfs, throws on error
             /// @param filename filename to save the file as
@@ -23,7 +28,7 @@ namespace sgns
                     std::shared_ptr<void> data) override;
             virtual void SaveASync(std::shared_ptr<boost::asio::io_context> ioc, std::function<void(std::shared_ptr<boost::asio::io_context> ioc)> handle_write,
                 std::string filename,
-                std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> data, std::string suffix) override;
+                ResultType data, std::string suffix) override;
     };
 } // End namespace sgns
 

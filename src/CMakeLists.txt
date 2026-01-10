@@ -12,14 +12,12 @@ add_library(AsyncIOManager STATIC
 	IPFSLoader.cpp
 	IPFSSaver.cpp
 	MNNLoader.cpp
-	#MNNParser.cpp
 	MNNSaver.cpp
 	URLStringUtil.cpp
 	WSCommon.cpp
 	WSLoader.cpp
+	asiomgr-logger.cpp
     )
-
-add_proto_library(ipfs-unixfs proto/unixfs.proto)
 
 target_link_libraries(AsyncIOManager PRIVATE
 	spdlog::spdlog
@@ -49,8 +47,8 @@ target_link_libraries(AsyncIOManager PRIVATE
 	ipfs-lite-cpp::ipfs_datastore_rocksdb
 	ipfs-lite-cpp::ipfs_kad_dht
 	ipfs-bitswap-proto
+	ipfs-unixfs-proto
 	ipfs-bitswap-cpp 
-	ipfs-unixfs
 	)
 include_directories(../include )
 

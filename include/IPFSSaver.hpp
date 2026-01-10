@@ -5,10 +5,7 @@
 
 #include "FileSaver.hpp"
 #include "ASIOSingleton.hpp"
-#include "ipfs_lite/rocksdb/rocksdb.hpp"
-#include "ipfs_lite/rocksdb/rocksdb_error.hpp"
-#include "ipfs_lite/ipfs/impl/datastore_rocksdb.hpp"
-#include "ipfs_lite/ipfs/impl/in_memory_datastore.hpp"
+#include "bitswap.hpp"
 
 namespace sgns
 {
@@ -23,7 +20,19 @@ namespace sgns
         virtual void SaveFile(std::string filename, std::shared_ptr<void> data) override;
         virtual void SaveASync(std::shared_ptr<boost::asio::io_context> ioc, std::function<void(std::shared_ptr<boost::asio::io_context> ioc)> handle_write,
             std::string filename,
-            std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> data, std::string suffix) override;
+            ResultType data, std::string suffix) override;
+        
+        /// @brief Set external bitswap instance for publishing content
+        /// @param bitswap Shared pointer to bitswap instance
+        void setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
+        
+        /// @brief Check if external bitswap is available
+        /// @return true if external bitswap is set
+        bool hasExternalBitswap() const;
+        
+    private:
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> externalBitswap_;
+        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("IPFSSaver");
 
     };
 }

@@ -1,13 +1,13 @@
 #include "FileManager.hpp"
 #include "URLStringUtil.h"
 #include "MNNLoader.hpp"
-#include "MNNParser.hpp"
 #include "MNNSaver.hpp"
 #include "IPFSLoader.hpp"
 #include "IPFSSaver.hpp"
 #include "HTTPLoader.hpp"
 #include "SFTPLoader.hpp"
 #include "WSLoader.hpp"
+#include <bitswap.hpp>
 
 void FileManager::RegisterLoader(const std::string &prefix,
         FileLoader *handlerLoader)
@@ -42,16 +42,14 @@ void FileManager::InitializeSingletons() {
     sgns::IPFSSaver::InitializeSingleton();
     sgns::MNNSaver::InitializeSingleton();
 }
-shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, StatusCallback status, FinalCallback finalcall, std::string savetype)
+shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, FinalCallback finalcall, std::string savetype)
 {
     std::string prefix;
     std::string filePath;
     std::string suffix;
 	
     getURLComponents(url, prefix, filePath, suffix);
-#if 0
-    std::cout << "DEBUG: URL: " << url << " -prefix: " << prefix << " -filePath: " << filePath << " -suffix: " << suffix << std::endl;
-#endif
+    m_logger->debug("URL: {} -prefix: {} -filePath: {} -suffix: {}", url, prefix, filePath, suffix);
     auto loaderIter = loaders.find(prefix);
     if (loaderIter == loaders.end())
     {
@@ -60,27 +58,32 @@ shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool
     //Increment Operations
     IncrementOutstandingOperations();
     //Create a handler
-    auto handle_read = [this, savetype, suffix, finalcall](std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save) {
-        std::cout << "Callback!" << std::endl;
-        //Parse Data
-        if (parse)
+    auto handle_read = [this, savetype, suffix, finalcall](std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save) {
+        if (buffers)
         {
-            auto parserIter = parsers.find("mnn");
-            auto parser = dynamic_cast<FileParser*>(parserIter->second);
-            //shared_ptr<void> data = parser->ParseASync(buffer);
-        }
-        //Save data or otherwise decrement counter of operations
-        if (save)
-        {
-            auto handle_write = [this](std::shared_ptr<boost::asio::io_context> ioc) {
+            //Parse Data
+            if (parse)
+            {
+                auto parserIter = parsers.find("mnn");
+                auto parser = dynamic_cast<FileParser*>(parserIter->second);
+                //shared_ptr<void> data = parser->ParseASync(buffer);
+            }
+            //Save data or otherwise decrement counter of operations
+            if (save)
+            {
+                auto handle_write = [this](std::shared_ptr<boost::asio::io_context> ioc) {
+                    DecrementOutstandingOperations(ioc);
+                    };
+                auto saverIter = savers.find(savetype);
+                auto saver = saverIter->second;
+                saver->SaveASync(ioc, handle_write, "", buffers, suffix);
+            }
+            else {
+                // Handle completion
                 DecrementOutstandingOperations(ioc);
-            };
-            auto saverIter = savers.find(savetype);
-            auto saver = saverIter->second;
-            saver->SaveASync(ioc,handle_write,"",buffers, suffix);
+            }
         }
         else {
-            // Handle completion
             DecrementOutstandingOperations(ioc);
         }
         finalcall(buffers);
@@ -89,7 +92,7 @@ shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool
     auto loader = loaderIter->second;
     // double check pointer is to a FileLoader class
     assert(dynamic_cast<FileLoader*>(loader));
-    shared_ptr<void> data = loader->LoadASync(filePath,parse,save,ioc,handle_read,status);
+    shared_ptr<void> data = loader->LoadASync(filePath,parse,save,ioc,handle_read);
     return data;
 }
 
@@ -100,9 +103,6 @@ shared_ptr<void> FileManager::LoadFile(const std::string &url, bool parse)
     std::string suffix;
 
     getURLComponents(url, prefix, filePath, suffix);
-#if 0
-    std::cout << "DEBUG: URL: " << url << " -prefix: " << prefix << " -filePath: " << filePath << " -suffix: " << suffix << std::endl;
-#endif
     auto loaderIter = loaders.find(prefix);
     if (loaderIter == loaders.end())
     {
@@ -160,6 +160,13 @@ void FileManager::SaveFile(const std::string &url, std::shared_ptr<void> data)
 /// @brief Function to decrement operation count
 void FileManager::DecrementOutstandingOperations(std::shared_ptr<boost::asio::io_context> ioc)
 {
+    if (outstandingOperations_ <= 0)
+    {
+        // Clean up io_context
+        m_logger->error("Tried to decrement operations but we have none already. This should never happen");
+        ioc->stop();
+        return;
+    }
     // Decrement the counter
     outstandingOperations_--;
 
@@ -181,4 +188,35 @@ std::shared_ptr<int> FileManager::GetOutstandingOperationsPointer()
 {
     // Return a shared pointer to the outstandingOperations counter
     return std::make_shared<int>(outstandingOperations_);
+}
+
+void FileManager::setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
+{
+    // Forward bitswap instance to IPFSLoader
+    auto ipfsLoaderIter = loaders.find("ipfs");
+    if (ipfsLoaderIter != loaders.end()) {
+        auto ipfsLoader = dynamic_cast<sgns::IPFSLoader*>(ipfsLoaderIter->second);
+        if (ipfsLoader) {
+            ipfsLoader->setBitswap(bitswap);
+            m_logger->info("Bitswap instance set for IPFS loader");
+        } else {
+            m_logger->warn("IPFS loader found but cast failed");
+        }
+    } else {
+        m_logger->warn("IPFS loader not registered, cannot set bitswap");
+    }
+    
+    // Forward bitswap instance to IPFSSaver
+    auto ipfsSaverIter = savers.find("ipfs");
+    if (ipfsSaverIter != savers.end()) {
+        auto ipfsSaver = dynamic_cast<sgns::IPFSSaver*>(ipfsSaverIter->second);
+        if (ipfsSaver) {
+            ipfsSaver->setBitswap(bitswap);
+            m_logger->info("Bitswap instance set for IPFS saver");
+        } else {
+            m_logger->warn("IPFS saver found but cast failed");
+        }
+    } else {
+        m_logger->warn("IPFS saver not registered, cannot set bitswap");
+    }
 }

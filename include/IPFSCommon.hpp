@@ -16,158 +16,26 @@
 #include "libp2p/protocol/identify/identify.hpp"
 #include "libp2p/multi/content_identifier_codec.hpp"
 #include "libp2p/protocol/ping/ping.hpp"
-#include "ipfs_lite/ipld/impl/ipld_node_decoder_pb.hpp"
 #include "ipfs_lite/dht/kademlia_dht.hpp"
 #include "libp2p/injector/kademlia_injector.hpp"
-#include <proto/unixfs.pb.h>
 //TEMP REmove
 #include <fstream>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include "FILEError.hpp"
-using Success = sgns::AsyncError::Success;
-using CustomResult = sgns::AsyncError::CustomResult;
+
+#include <libp2p/outcome/outcome.hpp>
+#include <asiomgr-logger.hpp>
+
+namespace outcome {
+	using libp2p::outcome::result;
+	using libp2p::outcome::success;
+	using libp2p::outcome::failure;
+}
 
 namespace sgns
 {
-	struct CIDInfo
-	{
-		/**
-		 * Data, which contains the main CID and any linked CIDs stored as a vector, as well as any associated data
-		 * an entire file grabbed over bitswap
-		 */
-		libp2p::multi::ContentIdentifier mainCID;
-		std::vector<libp2p::multi::ContentIdentifier> mainCIDs;
-		std::vector<std::string> directories;
-		std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> finalcontents;
-
-		size_t outstandingRequests_;
-		struct LinkedCIDInfo
-		{
-			libp2p::multi::ContentIdentifier linkedCID;
-			libp2p::multi::ContentIdentifier parentCID;
-			std::string directory;
-			std::vector<char> content;
-
-			LinkedCIDInfo(const libp2p::multi::ContentIdentifier& cid, const libp2p::multi::ContentIdentifier& parentcid, std::string& dir)
-				: linkedCID(cid), content(), parentCID(parentcid), directory(dir) {}
-		};
-		std::vector<LinkedCIDInfo> linkedCIDs;
-
-		CIDInfo(const libp2p::multi::ContentIdentifier& cid)
-			: mainCID(cid), mainCIDs(), linkedCIDs(), finalcontents(std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>()), outstandingRequests_() {}
-
-		/**
-		 * Group data for linked CIDs to make a complete file
-		 */
-		void groupLinkedCIDs() {
-			// Group by CID 
-			std::unordered_map<std::string, std::pair<std::string, std::vector<char>>> groupedData;
-			std::string cidbase;
-			// For each linked CID we will add data to group
-			for (const auto& linkedCID : linkedCIDs) {
-				//Use pretty string because CID can't be copied for unordered map
-				auto cidstring = linkedCID.parentCID.toPrettyString(cidbase);
-				auto it = groupedData.find(cidstring);
-				if (it == groupedData.end()) {
-					//Nothing there, so add it.
-					groupedData.emplace(cidstring, std::make_pair(linkedCID.directory, linkedCID.content));
-				}
-				else {
-					//Add it
-					it->second.second.insert(it->second.second.end(), linkedCID.content.begin(), linkedCID.content.end());
-				}
-			}
-
-			// Populate finalcontents
-			for (const auto& entry : groupedData) {
-				finalcontents->first.push_back(entry.second.first);
-				finalcontents->second.push_back(entry.second.second);
-			}
-		}
-
-		/**
-		 * Write final data out to directories. Not async.
-		 */
-		void writeFinalContentsToDirectories() {
-			auto basedir = boost::lexical_cast<std::string>((boost::uuids::random_generator())()) + "/";
-			//Iterate through finalcontents
-			for (size_t i = 0; i < finalcontents->first.size(); ++i) {
-				const std::string& directoryWithFile = basedir + finalcontents->first[i];
-				const std::vector<char>& content = finalcontents->second[i];
-
-				//Extract the directory path from the full path including the filename
-				std::filesystem::path filePath(directoryWithFile);
-				std::filesystem::path directory = filePath.parent_path();
-
-				// Create the directory if it doesn't exist
-				std::filesystem::create_directories(directory);
-
-				// Write the content to the file
-				std::ofstream outputFile(directoryWithFile, std::ios::binary);
-				if (outputFile.is_open()) {
-					outputFile.write(content.data(), content.size());
-					outputFile.close();
-				}
-				else {
-					// Handle error if unable to open file
-					std::cerr << "Error: Unable to open file " << directoryWithFile << " for writing." << std::endl;
-				}
-			}
-		}
-		/**
-		 * Set the data for a linked CID
-		 * @param linkedCID - Linked CID to set content to
-		 * @param content - Content to insert
-		 */
-		bool setContentForLinkedCID(const libp2p::multi::ContentIdentifier& linkedCID, const std::vector<char>& content)
-		{
-			auto it = std::find_if(linkedCIDs.begin(), linkedCIDs.end(),
-				[&linkedCID](const LinkedCIDInfo& info) {
-					return info.linkedCID == linkedCID;
-				});
-
-			if (it != linkedCIDs.end())
-			{
-				// Update the content for the linked CID
-				it->content = content;
-				return true;
-			}
-			return false;
-		}
-
-		/**
-		 * Check whether we have gotten data for all linked CIDs
-		 * use of outstandingRequests_ is preferred.
-		 */
-		bool allLinkedCIDsHaveContent() const
-		{
-			return std::all_of(linkedCIDs.begin(), linkedCIDs.end(),
-				[](const LinkedCIDInfo& linkedCIDInfo) {
-					return !linkedCIDInfo.content.empty();
-				});
-		}
-
-		/**
-		 * Create a shared buffer vector with data from all linked CIDs combined to create a single file.
-		 */
-		std::shared_ptr<std::vector<char>> combineContents() const
-		{
-			auto combinedContent = std::make_shared<std::vector<char>>();
-
-			// Iterate through each linkedCID and appends
-			for (const auto& linkedCIDInfo : linkedCIDs)
-			{
-				combinedContent->insert(combinedContent->end(),
-					linkedCIDInfo.content.begin(),
-					linkedCIDInfo.content.end());
-			}
-
-			return combinedContent;
-		}
-	};
 
 	/**
 	 * For creating a peer
@@ -180,8 +48,14 @@ namespace sgns
 	 * This class creates an IPFS Device and has a function to download
 	 * from an IPFS node(s).
 	 */
-	class IPFSDevice {
+	class IPFSDevice : public std::enable_shared_from_this<IPFSDevice> {
 	public:
+		enum class Error
+		{
+			CANNOT_DECODE = 1,
+			NO_SOURCE = 2,
+		};
+		using ResultType = outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>>;
 		/**
 		 * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
 		 * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
@@ -189,18 +63,22 @@ namespace sgns
 		 * @param parse - Whether to parse file upon completion (for MNN)
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
-		using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers, bool parse, bool save)>;
-		/**
-		 * Status callback returns an error code as an async load proceeds
-		 * @param int - Status code
-		 */
-		using StatusCallback = std::function<void(const CustomResult&)>;
+		using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
 
 		/**
 		 * Create an IPFS Singlelton Device and return instance
 		 * @param ioc - Asio io context to use
 		 */
-		static IPFS::outcome::result<std::shared_ptr<IPFSDevice>> getInstance(std::shared_ptr<boost::asio::io_context> ioc);
+		static outcome::result<std::shared_ptr<IPFSDevice>> getInstance(std::shared_ptr<boost::asio::io_context> ioc);
+
+		/**
+		 * Create an IPFS Device instance using external bitswap (no singleton)
+		 * @param ioc - Asio io context to use
+		 * @param bitswap - External bitswap instance to use
+		 */
+		static outcome::result<std::shared_ptr<IPFSDevice>> createWithBitswap(
+			std::shared_ptr<boost::asio::io_context> ioc,
+			std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
 		/**
 		 * Get bitswap from device
 		 */
@@ -232,8 +110,7 @@ namespace sgns
 			int addressoffset,
 			bool parse,
 			bool save,
-			CompletionCallback handle_read,
-			StatusCallback status
+			CompletionCallback handle_read
 		);
 		void StartFindingPeersWithRetry(
 			std::shared_ptr<boost::asio::io_context> ioc,
@@ -242,8 +119,7 @@ namespace sgns
 			int addressoffset,
 			bool parse,
 			bool save,
-			CompletionCallback handle_read,
-			StatusCallback status);
+			CompletionCallback handle_read);
 		/**
 		 * Add the Main CID for a file to bitswap wantlist to get information or file(if small enough)
 		 * @param ioc - Asio io context to use
@@ -262,41 +138,46 @@ namespace sgns
 			int addressoffset,
 			bool parse,
 			bool save,
-			CompletionCallback handle_read,
-			StatusCallback status);
+			CompletionCallback handle_read);
 
 		/**
-		 * Add an address to pool of addresses to try to get file using IPFS bitswap
-		 * @param address - libp2p multiaddress to add to pool /ip4/127.0.0.1/tcp/4001/p2p/CID format
+		 * Add a peer address for a specific CID
+		 * @param cid - content identifier
+		 * @param address - libp2p multiaddress to add for this CID
 		 */
 		void addAddress(
-			libp2p::multi::Multiaddress address
+			const sgns::ipfs_bitswap::CID& cid,
+			const libp2p::multi::Multiaddress& address
 		);
-		void addAddresses(const std::vector<libp2p::peer::PeerInfo>& addresses);
-
+		
 		/**
-		 * Add the data of a linked CID to list containing all linked CIDs and associated data
-		 * @param mainCID - Main CID of file we are getting
-		 * @param linkedCID - Linked CID to main CID to get a portion of file
-		 * @param content - The content we retrieved for the linked CID from bitswap
+		 * Add multiple peer addresses for a specific CID
+		 * @param cid - content identifier
+		 * @param addresses - vector of multiaddresses
 		 */
-		bool setContentForLinkedCID(const sgns::ipfs_bitswap::CID& mainCID,
-			const sgns::ipfs_bitswap::CID& linkedCID,
-			const std::vector<char>& content);
+		void addAddresses(
+			const sgns::ipfs_bitswap::CID& cid,
+			const std::vector<libp2p::multi::Multiaddress>& addresses
+		);
 
-		bool CheckIfAllSet(const sgns::ipfs_bitswap::CID& mainCID);
-		/**
-		 * Get a buffer of the combineed data of all linked CIDs to create an entire file.
-		 * @param mainCID - Main CID of file we are getting
-		 */
-		std::shared_ptr<std::vector<char>> combineLinkedCIDs(const sgns::ipfs_bitswap::CID& mainCID);
-
-		/**
-		 * Add a CIDInfo object to list of CIDs we are trying to get.
-		 * @param cidInfo - A CIDInfo object struct as defined above
-		 */
-		size_t addCID(CIDInfo& cidInfo);
 	private:
+		/**
+		 * Convert UnixFSContent from bitswap to AsyncIOManager result format
+		 * @param ioc - Asio io context
+		 * @param unixfsContent - UnixFS content from bitswap RequestContent
+		 * @param filename - Base filename for result
+		 * @param parse - Whether to parse file upon completion
+		 * @param save - Whether to save the file to local disk upon completion
+		 * @param handle_read - Completion callback
+		 */
+		void convertUnixFSContentToResult(
+			std::shared_ptr<boost::asio::io_context> ioc,
+			const sgns::ipfs_bitswap::UnixFSContent& unixfsContent,
+			const std::string& filename,
+			bool parse,
+			bool save,
+			CompletionCallback handle_read);
+
 		/**
 		 * Create an IPFSDevice along with associated bitswap and host on an asio io_context
 		 * @param ioc - Asio io context to use
@@ -304,30 +185,13 @@ namespace sgns
 		IPFSDevice(std::shared_ptr<boost::asio::io_context> ioc);
 
 		/**
-		 * Add the sub CID for a file to bitswap wantlist to get part of file
+		 * Create an IPFSDevice using external bitswap instance
 		 * @param ioc - Asio io context to use
-		 * @param cid - IPFS Main CID to get from bitswap
-		 * @param parentcid - CID of the CID that had this linked CID
-		 * @param scid - Linked CID to get file of
-		 * @param directory - Path of file
-		 * @param addressoffset - Offset from list of addresses to use, usually want to call 0 on this as it will loop through from starting point if needed
-		 * @param parse - Whether to parse file upon completion (for MNN currently)
-		 * @param save - Whether to save the file to local disk upon completion
-		 * @param handle_read - Filemanager callback on completion
-		 * @param status - Status function that will be updated with status codes as operation progresses
+		 * @param bitswap - External bitswap instance to use
 		 */
-		bool RequestBlockSub(
-			std::shared_ptr<boost::asio::io_context> ioc,
-			const sgns::ipfs_bitswap::CID& cid,
-			const sgns::ipfs_bitswap::CID& parentcid,
-			const sgns::ipfs_bitswap::CID& scid,
-			std::string directory,
-			int addressoffset,
-			bool parse,
-			bool save,
-			CompletionCallback handle_read,
-			StatusCallback status);
+		IPFSDevice(std::shared_ptr<boost::asio::io_context> ioc, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
 
+		sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger("IPFSCommon");
 
 		//Common vars used for getting file from IPFS
 		static std::shared_ptr<IPFSDevice> instance_;
@@ -337,31 +201,6 @@ namespace sgns
 		std::shared_ptr<libp2p::Host> host_;
 		std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_;
 		boost::asio::deadline_timer dhtretry_;
-		//std::shared_ptr<std::vector<libp2p::multi::Multiaddress>> peerAddresses_;
-		std::shared_ptr<std::vector<libp2p::peer::PeerInfo>> peerAddresses_;
-
-		// Maintain a list of requested CIDs along with their linked CIDs and the content of the linked CIDs
-		std::vector<CIDInfo> requestedCIDs_;
-
-		/**
-		 * Find index of CID we have requested for use in bitswap
-		 * @param cid - CID to find in list
-		 */
-		size_t findRequestedCIDIndex(const libp2p::multi::ContentIdentifier& cid) const {
-			auto it = std::find_if(requestedCIDs_.begin(), requestedCIDs_.end(),
-				[&cid](const CIDInfo& cidInfo) {
-					return cidInfo.mainCID == cid;
-				});
-
-			if (it != requestedCIDs_.end()) {
-				// Found the CID, return its index
-				return std::distance(requestedCIDs_.begin(), it);
-			}
-			else {
-				// CID not found
-				return -1; 
-			}
-		}
 
 		//Default Bootstrap Servers
 		std::vector<std::string> bootstrapAddresses_ = {
