@@ -350,7 +350,7 @@ private:
   bool execute_on_destruction;
 };
 
-} // namespace detail
+}
 
 using Headers = std::multimap<std::string, std::string, detail::ci>;
 
@@ -738,7 +738,7 @@ private:
 
 ssize_t write_headers(Stream &strm, const Headers &headers);
 
-} // namespace detail
+}
 
 class Server {
 public:
@@ -1736,7 +1736,7 @@ inline uint64_t get_header_value_u64(const Headers &headers,
   return def;
 }
 
-} // namespace detail
+}
 
 inline uint64_t Request::get_header_value_u64(const std::string &key,
                                               size_t id) const {
@@ -2175,7 +2175,7 @@ private:
   void *addr_;
 };
 
-} // namespace detail
+}
 
 // ----------------------------------------------------------------------------
 
@@ -3317,7 +3317,7 @@ inline constexpr unsigned int operator"" _t(const char *s, size_t l) {
   return str2tag_core(s, l, 0);
 }
 
-} // namespace udl
+}
 
 inline std::string
 find_content_type(const std::string &path,
@@ -3914,7 +3914,7 @@ bool read_content(Stream &strm, T &x, size_t payload_max_length, int &status,
         if (!ret) { status = exceed_payload_max_length ? 413 : 400; }
         return ret;
       });
-} // namespace detail
+}
 
 inline ssize_t write_headers(Stream &strm, const Headers &headers) {
   ssize_t write_len = 0;
@@ -5044,7 +5044,7 @@ private:
   ContentProviderWithoutLength content_provider_;
 };
 
-} // namespace detail
+}
 
 inline std::string hosted_at(const std::string &hostname) {
   std::vector<std::string> addrs;
@@ -5505,7 +5505,7 @@ inline bool RegexMatcher::match(Request &request) const {
   return std::regex_match(request.path, request.matches, regex_);
 }
 
-} // namespace detail
+}
 
 // HTTP server implementation
 inline Server::Server()
@@ -8238,7 +8238,7 @@ inline socket_t SSLSocketStream::socket() const { return sock_; }
 
 static SSLInit sslinit_;
 
-} // namespace detail
+}
 
 // SSL HTTP server implementation
 inline SSLServer::SSLServer(const char *cert_path, const char *private_key_path,
@@ -9255,7 +9255,7 @@ inline SSL_CTX *Client::ssl_context() const {
 
 // ----------------------------------------------------------------------------
 
-} // namespace httplib
+}
 
 #if defined(_WIN32) && defined(CPPHTTPLIB_USE_POLL)
 #undef poll
