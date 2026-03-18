@@ -1,8 +1,7 @@
 /**
  * Header file for the WSCommon
  */
-#ifndef WSCOMMON_HPP
-#define WSCOMMON_HPP
+#pragma once
 #include <iostream>
 #include <sstream>
 #include <filesystem>
@@ -97,5 +96,3 @@ namespace sgns
 		bool downloading_ = false;
 	};
 }
-
-#endif

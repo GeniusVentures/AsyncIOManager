@@ -1,8 +1,7 @@
 /**
  * Header file for the HTTPCommon
  */
-#ifndef HTTPCOMMON_HPP
-#define HTTPCOMMON_HPP
+#pragma once
 #include <iostream>
 #include <sstream>
 #include <filesystem>
@@ -97,5 +96,3 @@ namespace sgns
 		bool downloading_ = false;
 	};
 }
-
-#endif

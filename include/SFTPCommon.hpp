@@ -1,8 +1,7 @@
 /**
  * Header file for the SFTPCommon
  */
-#ifndef SFTPCOMMON_HPP
-#define SFTPCOMMON_HPP
+#pragma once
 #include <iostream>
 #include <sstream>
 #include <filesystem>
@@ -165,5 +164,3 @@ namespace sgns
 		bool downloading_ = false;
 	};
 }
-
-#endif

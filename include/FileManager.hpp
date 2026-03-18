@@ -1,5 +1,4 @@
-#ifndef FILELOADERMANAGER_HPP
-#define FILELOADERMANAGER_HPP
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -118,5 +117,3 @@ class FileManager
         /// @param bitswap Shared pointer to existing bitswap instance to reuse
         void setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
 };
-
-#endif

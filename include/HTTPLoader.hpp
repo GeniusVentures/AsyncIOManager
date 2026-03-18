@@ -2,8 +2,7 @@
  * Header file for the WSLoader
  */
 
-#ifndef INCLUDE_HTTPLOADER_HPP_
-#define INCLUDE_HTTPLOADER_HPP_
+#pragma once
 
 #include <memory>
 #include <string>
@@ -59,5 +58,3 @@ namespace sgns
     };
 
 } // End namespace sgns
-
-#endif /* INCLUDE_HTTPLOADER_HPP_ */

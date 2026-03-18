@@ -1,7 +1,6 @@
 // IPFSSAVER.hpp
 
-#ifndef IPFSSAVER_HPP
-#define IPFSSAVER_HPP
+#pragma once
 
 #include "FileSaver.hpp"
 #include "ASIOSingleton.hpp"
@@ -36,4 +35,3 @@ namespace sgns
 
     };
 }
-#endif

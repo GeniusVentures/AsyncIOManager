@@ -1,8 +1,7 @@
 /**
  * Header file for the IPFSCommon
  */
-#ifndef IPFSCOMMON_HPP
-#define IPFSCOMMON_HPP
+#pragma once
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -230,5 +229,3 @@ namespace sgns
 
 
 }
-
-#endif

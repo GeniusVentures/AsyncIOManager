@@ -1,5 +1,4 @@
-#ifndef TEST_BASE_MNN_TEST_HPP_
-#define TEST_BASE_MNN_TEST_HPP_
+#pragma once
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
@@ -65,5 +64,3 @@ namespace test
       fs::path base_path;
   };
 } // namespace test
-
-#endif /* TEST_BASE_MNN_TEST_HPP_ */

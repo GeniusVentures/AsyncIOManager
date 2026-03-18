@@ -1,7 +1,6 @@
 // FileLoaders.hpp
 
-#ifndef FILELOADER_HPP
-#define FILELOADER_HPP
+#pragma once
 
 #include <string>
 #include "boost/asio.hpp"
@@ -43,6 +42,3 @@ public:
      */
     virtual std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback) = 0;
 };
-
-#endif
-

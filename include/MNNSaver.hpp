@@ -2,8 +2,7 @@
  * MNNSaver.hpp
  */
 
-#ifndef INCLUDE_MNNSAVER_HPP_
-#define INCLUDE_MNNSAVER_HPP_
+#pragma once
 
 #include "FileSaver.hpp"
 #include "ASIOSingleton.hpp"
@@ -31,5 +30,3 @@ namespace sgns
                 ResultType data, std::string suffix) override;
     };
 } // End namespace sgns
-
-#endif /* INCLUDE_MNNSAVER_HPP_ */
