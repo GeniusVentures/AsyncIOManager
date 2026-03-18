@@ -2,8 +2,7 @@
  * Header file for the MNNLoader
  */
 
-#ifndef INCLUDE_MNNLOADER_HPP_
-#define INCLUDE_MNNLOADER_HPP_
+#pragma once
 #include <memory>
 #include <string>
 #include "FileLoader.hpp"
@@ -61,5 +60,3 @@ namespace sgns
 
     };
 } // End namespace sgns
-
-#endif /* INCLUDE_MNNLOADER_HPP_ */

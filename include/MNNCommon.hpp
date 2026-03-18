@@ -3,11 +3,8 @@
  * @author scorpioluck20
  */
 
-#ifndef INCLUDE_MNNCOMMON_HPP_
-#define INCLUDE_MNNCOMMON_HPP_
+#pragma once
 
 #include <MNN/MNNDefine.h>
 #include <MNN/Interpreter.hpp>
 #include <MNN/Tensor.hpp>
-
-#endif /* INCLUDE_MNNCOMMON_HPP_ */

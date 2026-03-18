@@ -1,5 +1,4 @@
-#ifndef ASIOMGR_LOGGER_HPP
-#define ASIOMGR_LOGGER_HPP
+#pragma once
 
 #include <spdlog/fmt/ostr.h>
 #include <spdlog/spdlog.h>
@@ -19,5 +18,3 @@ namespace sgns::asiomgr
    */
     Logger createLogger( const std::string &tag, const std::string &basepath = "" );
 } // namespace sgns::sgprocmanager
-
-#endif // ASIOMGR_LOGGER_HPP

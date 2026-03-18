@@ -2,8 +2,7 @@
  * Header file for the SFTPLoader, loading files from SFTP
  */
 
-#ifndef INCLUDE_SFTPLOADER_HPP_
-#define INCLUDE_SFTPLOADER_HPP_
+#pragma once
 
 #include <memory>
 #include <string>
@@ -55,5 +54,3 @@ namespace sgns
     };
 
 } // End namespace sgns
-
-#endif /* INCLUDE_SFTPLOADER_HPP */

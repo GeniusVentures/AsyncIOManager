@@ -5,8 +5,7 @@
 //  MIT License
 //
 
-#ifndef CPPHTTPLIB_HTTPLIB_H
-#define CPPHTTPLIB_HTTPLIB_H
+#pragma once
 
 #define CPPHTTPLIB_VERSION "0.14.2"
 
@@ -9261,5 +9260,3 @@ inline SSL_CTX *Client::ssl_context() const {
 #if defined(_WIN32) && defined(CPPHTTPLIB_USE_POLL)
 #undef poll
 #endif
-
-#endif // CPPHTTPLIB_HTTPLIB_H

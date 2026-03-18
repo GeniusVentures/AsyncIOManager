@@ -2,8 +2,7 @@
  * Header file for the IPFSLoader
  */
 
-#ifndef INCLUDE_IPFSLOADER_HPP_
-#define INCLUDE_IPFSLOADER_HPP_
+#pragma once
 
 #include <memory>
 #include <string>
@@ -82,5 +81,3 @@ namespace sgns
     };
 
 } // End namespace sgns
-
-#endif /* INCLUDE_IPFSLOADER_HPP_ */
