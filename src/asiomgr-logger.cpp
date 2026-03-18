@@ -15,27 +15,31 @@ namespace
         logger.set_pattern( "[%Y-%m-%d %H:%M:%S.%F][th:%t][%l][%n] %v" );
     }
 
-    std::shared_ptr<spdlog::logger> createLogger( const std::string &tag, bool debug_mode = false, const std::string &basepath = "" )
+    std::shared_ptr<spdlog::logger> createLogger( const std::string &tag,
+                                                  bool               debug_mode = false,
+                                                  const std::string &basepath   = "" )
     {
         std::shared_ptr<spdlog::logger> logger;
 #if defined( ANDROID )
-        if (basepath.size() > 0)
+        if ( basepath.size() > 0 )
         {
-            logger = spdlog::basic_logger_mt(tag, basepath);
+            logger = spdlog::basic_logger_mt( tag, basepath );
         }
-        else {
-            logger = spdlog::android_logger_mt(tag);
+        else
+        {
+            logger = spdlog::android_logger_mt( tag );
         }
-        
+
 #else
-        if (basepath.size() > 0)
+        if ( basepath.size() > 0 )
         {
-            logger = spdlog::basic_logger_mt(tag, basepath);
+            logger = spdlog::basic_logger_mt( tag, basepath );
         }
-        else {
-            logger = spdlog::stdout_color_mt(tag); 
+        else
+        {
+            logger = spdlog::stdout_color_mt( tag );
         }
-        
+
 #endif
         if ( debug_mode )
         {
@@ -47,11 +51,11 @@ namespace
         }
         return logger;
     }
-} // namespace
+}
 
 namespace sgns::asiomgr
 {
-    Logger createLogger( const std::string &tag, const std::string& basepath )
+    Logger createLogger( const std::string &tag, const std::string &basepath )
     {
         static std::mutex           mutex;
         std::lock_guard<std::mutex> lock( mutex );
@@ -62,4 +66,4 @@ namespace sgns::asiomgr
         }
         return logger;
     }
-} // namespace sgns::asiomgr
+}

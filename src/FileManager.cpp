@@ -9,30 +9,25 @@
 #include "WSLoader.hpp"
 #include <bitswap.hpp>
 
-void FileManager::RegisterLoader(const std::string &prefix,
-        FileLoader *handlerLoader)
-{   
+void FileManager::RegisterLoader( const std::string &prefix, FileLoader *handlerLoader )
+{
     loaders[prefix] = handlerLoader;
 }
 
-void FileManager::RegisterParser(const std::string &suffix,
-        FileParser *handlerParser)
+void FileManager::RegisterParser( const std::string &suffix, FileParser *handlerParser )
 {
     parsers[suffix] = handlerParser;
 }
 
-void FileManager::RegisterSaver(const std::string &prefix,
-        FileSaver *handlerSaver)
+void FileManager::RegisterSaver( const std::string &prefix, FileSaver *handlerSaver )
 {
     savers[prefix] = handlerSaver;
 }
 
-void AsyncHandler(boost::system::error_code ec, std::size_t n, std::vector<char>& buffer) {
+void AsyncHandler( boost::system::error_code ec, std::size_t n, std::vector<char> &buffer ) {}
 
-
-}
-
-void FileManager::InitializeSingletons() {
+void FileManager::InitializeSingletons()
+{
     sgns::MNNLoader::InitializeSingleton();
     //sgns::MNNParser::InitializeSingleton();
     //sgns::SFTPLoader::InitializeSingleton();
@@ -42,128 +37,137 @@ void FileManager::InitializeSingletons() {
     sgns::IPFSSaver::InitializeSingleton();
     sgns::MNNSaver::InitializeSingleton();
 }
-shared_ptr<void> FileManager::LoadASync(const std::string& url, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, FinalCallback finalcall, std::string savetype)
+
+shared_ptr<void> FileManager::LoadASync( const std::string                       &url,
+                                         bool                                     parse,
+                                         bool                                     save,
+                                         std::shared_ptr<boost::asio::io_context> ioc,
+                                         FinalCallback                            finalcall,
+                                         std::string                              savetype )
 {
     std::string prefix;
     std::string filePath;
     std::string suffix;
-	
-    getURLComponents(url, prefix, filePath, suffix);
-    m_logger->debug("URL: {} -prefix: {} -filePath: {} -suffix: {}", url, prefix, filePath, suffix);
-    auto loaderIter = loaders.find(prefix);
-    if (loaderIter == loaders.end())
+
+    getURLComponents( url, prefix, filePath, suffix );
+    m_logger->debug( "URL: {} -prefix: {} -filePath: {} -suffix: {}", url, prefix, filePath, suffix );
+    auto loaderIter = loaders.find( prefix );
+    if ( loaderIter == loaders.end() )
     {
-        throw std::range_error("No loader registered for prefix " + prefix);
+        throw std::range_error( "No loader registered for prefix " + prefix );
     }
     //Increment Operations
     IncrementOutstandingOperations();
     //Create a handler
-    auto handle_read = [this, savetype, suffix, finalcall](std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save) {
-        if (buffers)
+    auto handle_read = [this, savetype, suffix, finalcall]( std::shared_ptr<boost::asio::io_context> ioc,
+                                                            ResultType                               buffers,
+                                                            bool                                     parse,
+                                                            bool                                     save )
+    {
+        if ( buffers )
         {
             //Parse Data
-            if (parse)
+            if ( parse )
             {
-                auto parserIter = parsers.find("mnn");
-                auto parser = dynamic_cast<FileParser*>(parserIter->second);
+                auto parserIter = parsers.find( "mnn" );
+                auto parser     = dynamic_cast<FileParser *>( parserIter->second );
                 //shared_ptr<void> data = parser->ParseASync(buffer);
             }
             //Save data or otherwise decrement counter of operations
-            if (save)
+            if ( save )
             {
-                auto handle_write = [this](std::shared_ptr<boost::asio::io_context> ioc) {
-                    DecrementOutstandingOperations(ioc);
-                    };
-                auto saverIter = savers.find(savetype);
-                auto saver = saverIter->second;
-                saver->SaveASync(ioc, handle_write, "", buffers, suffix);
+                auto handle_write = [this]( std::shared_ptr<boost::asio::io_context> ioc )
+                { DecrementOutstandingOperations( ioc ); };
+                auto saverIter = savers.find( savetype );
+                auto saver     = saverIter->second;
+                saver->SaveASync( ioc, handle_write, "", buffers, suffix );
             }
-            else {
+            else
+            {
                 // Handle completion
-                DecrementOutstandingOperations(ioc);
+                DecrementOutstandingOperations( ioc );
             }
         }
-        else {
-            DecrementOutstandingOperations(ioc);
+        else
+        {
+            DecrementOutstandingOperations( ioc );
         }
-        finalcall(buffers);
-
+        finalcall( buffers );
     };
     auto loader = loaderIter->second;
     // double check pointer is to a FileLoader class
-    assert(dynamic_cast<FileLoader*>(loader));
-    shared_ptr<void> data = loader->LoadASync(filePath,parse,save,ioc,handle_read);
+    assert( dynamic_cast<FileLoader *>( loader ) );
+    shared_ptr<void> data = loader->LoadASync( filePath, parse, save, ioc, handle_read );
     return data;
 }
 
-shared_ptr<void> FileManager::LoadFile(const std::string &url, bool parse)
+shared_ptr<void> FileManager::LoadFile( const std::string &url, bool parse )
 {
     std::string prefix;
     std::string filePath;
     std::string suffix;
 
-    getURLComponents(url, prefix, filePath, suffix);
-    auto loaderIter = loaders.find(prefix);
-    if (loaderIter == loaders.end())
+    getURLComponents( url, prefix, filePath, suffix );
+    auto loaderIter = loaders.find( prefix );
+    if ( loaderIter == loaders.end() )
     {
-        throw std::range_error("No loader registered for prefix " + prefix);
+        throw std::range_error( "No loader registered for prefix " + prefix );
     }
     auto loader = loaderIter->second;
     // double check pointer is to a FileLoader class
-    assert(dynamic_cast<FileLoader*>(loader));
+    assert( dynamic_cast<FileLoader *>( loader ) );
 
-    shared_ptr<void> data = loader->LoadFile(filePath);
-    if (parse)
+    shared_ptr<void> data = loader->LoadFile( filePath );
+    if ( parse )
     {
-        data = ParseData(suffix, data);
+        data = ParseData( suffix, data );
     }
 
     return data;
 }
 
-shared_ptr<void> FileManager::ParseData(const std::string &suffix,
-        shared_ptr<void> data)
+shared_ptr<void> FileManager::ParseData( const std::string &suffix, shared_ptr<void> data )
 {
-    auto parserIter = parsers.find(suffix);
-    if (parserIter == parsers.end())
+    auto parserIter = parsers.find( suffix );
+    if ( parserIter == parsers.end() )
     {
-        throw std::range_error("No parser registered for suffix " + suffix);
+        throw std::range_error( "No parser registered for suffix " + suffix );
     }
 
-    auto parser = dynamic_cast<FileParser*>(parserIter->second);
-    data = parser->ParseData(data);
+    auto parser = dynamic_cast<FileParser *>( parserIter->second );
+    data        = parser->ParseData( data );
     return data;
 }
 
-void FileManager::SaveFile(const std::string &url, std::shared_ptr<void> data)
+void FileManager::SaveFile( const std::string &url, std::shared_ptr<void> data )
 {
     std::string prefix;
     std::string filePath;
     std::string suffix;
 
-    getURLComponents(url, prefix, filePath, suffix);
+    getURLComponents( url, prefix, filePath, suffix );
 
-    auto saverIter = savers.find(prefix);
+    auto saverIter = savers.find( prefix );
 
-    if (saverIter == savers.end())
+    if ( saverIter == savers.end() )
     {
-        throw std::range_error("No saver registered for prefix " + prefix);
+        throw std::range_error( "No saver registered for prefix " + prefix );
     }
 
     auto saver = saverIter->second;
     // double check pointer is to a FileSaver class
-    assert(dynamic_cast<FileSaver*>(saver));
+    assert( dynamic_cast<FileSaver *>( saver ) );
 
-    saver->SaveFile(filePath, data);
+    saver->SaveFile( filePath, data );
 }
 
 /// @brief Function to decrement operation count
-void FileManager::DecrementOutstandingOperations(std::shared_ptr<boost::asio::io_context> ioc)
+void FileManager::DecrementOutstandingOperations( std::shared_ptr<boost::asio::io_context> ioc )
 {
-    if (outstandingOperations_ <= 0)
+    if ( outstandingOperations_ <= 0 )
     {
         // Clean up io_context
-        m_logger->error("Tried to decrement operations but we have none already. This should never happen");
+        m_logger->error( "Tried to decrement operations but we have none already. This should never happen" );
         ioc->stop();
         return;
     }
@@ -171,52 +175,65 @@ void FileManager::DecrementOutstandingOperations(std::shared_ptr<boost::asio::io
     outstandingOperations_--;
 
     // If all operations are complete, perform additional cleanup
-    if (outstandingOperations_ == 0) {
+    if ( outstandingOperations_ == 0 )
+    {
         // Clean up io_context
         ioc->stop();
     }
 }
 
 /// @brief Function to increment operation count
-void FileManager::IncrementOutstandingOperations() 
+void FileManager::IncrementOutstandingOperations()
 {
     // Increment the counter
     outstandingOperations_++;
 }
 
-std::shared_ptr<int> FileManager::GetOutstandingOperationsPointer() 
+std::shared_ptr<int> FileManager::GetOutstandingOperationsPointer()
 {
     // Return a shared pointer to the outstandingOperations counter
-    return std::make_shared<int>(outstandingOperations_);
+    return std::make_shared<int>( outstandingOperations_ );
 }
 
-void FileManager::setBitswap(std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
+void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
 {
     // Forward bitswap instance to IPFSLoader
-    auto ipfsLoaderIter = loaders.find("ipfs");
-    if (ipfsLoaderIter != loaders.end()) {
-        auto ipfsLoader = dynamic_cast<sgns::IPFSLoader*>(ipfsLoaderIter->second);
-        if (ipfsLoader) {
-            ipfsLoader->setBitswap(bitswap);
-            m_logger->info("Bitswap instance set for IPFS loader");
-        } else {
-            m_logger->warn("IPFS loader found but cast failed");
+    auto ipfsLoaderIter = loaders.find( "ipfs" );
+    if ( ipfsLoaderIter != loaders.end() )
+    {
+        auto ipfsLoader = dynamic_cast<sgns::IPFSLoader *>( ipfsLoaderIter->second );
+        if ( ipfsLoader )
+        {
+            ipfsLoader->setBitswap( bitswap );
+            m_logger->info( "Bitswap instance set for IPFS loader" );
         }
-    } else {
-        m_logger->warn("IPFS loader not registered, cannot set bitswap");
+        else
+        {
+            m_logger->warn( "IPFS loader found but cast failed" );
+        }
     }
-    
+    else
+    {
+        m_logger->warn( "IPFS loader not registered, cannot set bitswap" );
+    }
+
     // Forward bitswap instance to IPFSSaver
-    auto ipfsSaverIter = savers.find("ipfs");
-    if (ipfsSaverIter != savers.end()) {
-        auto ipfsSaver = dynamic_cast<sgns::IPFSSaver*>(ipfsSaverIter->second);
-        if (ipfsSaver) {
-            ipfsSaver->setBitswap(bitswap);
-            m_logger->info("Bitswap instance set for IPFS saver");
-        } else {
-            m_logger->warn("IPFS saver found but cast failed");
+    auto ipfsSaverIter = savers.find( "ipfs" );
+    if ( ipfsSaverIter != savers.end() )
+    {
+        auto ipfsSaver = dynamic_cast<sgns::IPFSSaver *>( ipfsSaverIter->second );
+        if ( ipfsSaver )
+        {
+            ipfsSaver->setBitswap( bitswap );
+            m_logger->info( "Bitswap instance set for IPFS saver" );
         }
-    } else {
-        m_logger->warn("IPFS saver not registered, cannot set bitswap");
+        else
+        {
+            m_logger->warn( "IPFS saver found but cast failed" );
+        }
+    }
+    else
+    {
+        m_logger->warn( "IPFS saver not registered, cannot set bitswap" );
     }
 }

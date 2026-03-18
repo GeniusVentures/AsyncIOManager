@@ -10,7 +10,6 @@
 //#include "MNNCommon.hpp"
 #include "ASIOSingleton.hpp"
 
-
 namespace sgns
 {
 
@@ -19,7 +18,8 @@ namespace sgns
      */
     class HTTPLoader : public FileLoader
     {
-        SINGLETON_PTR(HTTPLoader);
+        SINGLETON_PTR( HTTPLoader );
+
     public:
         enum class Error
         {
@@ -34,14 +34,15 @@ namespace sgns
          * @param parse - Whether to parse file upon completion (for MNN)
          * @param save - Whether to save the file to local disk upon completion
          */
-        using CompletionCallback = std::function<void(std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save)>;
+        using CompletionCallback = std::function<
+            void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save )>;
 
         /**ok
          * Load Data on the MNN file
          * @param filename - MNN file part
          * @return Interpreter of MNN file
          */
-        std::shared_ptr<void> LoadFile(std::string filename) override;
+        std::shared_ptr<void> LoadFile( std::string filename ) override;
         /**
          * Asynchronously load a file
          * @param filename - Filename to load
@@ -52,9 +53,13 @@ namespace sgns
          * @param status - Status function that will be updated with status codes as operation progresses
          * @return String indicating init
          */
-        std::shared_ptr<void> LoadASync(std::string filename, bool parse, bool save, std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback callback) override;
-    protected:
+        std::shared_ptr<void> LoadASync( std::string                              filename,
+                                         bool                                     parse,
+                                         bool                                     save,
+                                         std::shared_ptr<boost::asio::io_context> ioc,
+                                         CompletionCallback                       callback ) override;
 
+    protected:
     };
 
 } // End namespace sgns

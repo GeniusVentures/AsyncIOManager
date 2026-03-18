@@ -17,4 +17,4 @@ namespace sgns::asiomgr
    * @return logger object
    */
     Logger createLogger( const std::string &tag, const std::string &basepath = "" );
-} // namespace sgns::sgprocmanager
+}
