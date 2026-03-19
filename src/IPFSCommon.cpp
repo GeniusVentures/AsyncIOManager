@@ -37,7 +37,7 @@ namespace sgns
             }
             instance_->bitswap_->start();
             instance_->host_->start();
-            instance_->dht_->Start();
+            BOOST_OUTCOME_TRY(instance_->dht_->Start());
         }
 
         return instance_;
