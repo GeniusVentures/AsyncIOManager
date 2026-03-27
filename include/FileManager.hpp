@@ -102,6 +102,18 @@ public:
                                 FinalCallback                            finalcall,
                                 std::string                              savetype );
 
+        /**
+            * Asynchronously save data based on type
+            * @param url - URL to save to, will determine saver we use
+            * @param data - Buffer payload to save
+            * @param ioc - ASIO context for async saving
+            * @param finalcall - Filemanager callback on completion
+            */
+        void SaveASync( const std::string                       &url,
+                    ResultType                               data,
+                    std::shared_ptr<boost::asio::io_context> ioc,
+                    FinalCallback                            finalcall );
+
     /// @brief Load a file given a filePath and optional parse the data
     /// @param url the full path and filename to load
     /// @param parse bool on weather to parse the file or not
