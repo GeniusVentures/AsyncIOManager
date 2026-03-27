@@ -101,6 +101,49 @@ shared_ptr<void> FileManager::LoadASync( const std::string                      
     return data;
 }
 
+void FileManager::SaveASync( const std::string                       &url,
+                             ResultType                               data,
+                             std::shared_ptr<boost::asio::io_context> ioc,
+                             FinalCallback                            finalcall )
+{
+    std::string prefix;
+    std::string filePath;
+    std::string suffix;
+
+    getURLComponents( url, prefix, filePath, suffix );
+    m_logger->debug( "URL: {} -prefix: {} -filePath: {} -suffix: {}", url, prefix, filePath, suffix );
+
+    auto saverIter = savers.find( prefix );
+    if ( saverIter == savers.end() )
+    {
+        throw std::range_error( "No saver registered for prefix " + prefix );
+    }
+
+    auto saver = saverIter->second;
+    assert( dynamic_cast<FileSaver *>( saver ) );
+
+    IncrementOutstandingOperations();
+
+    auto handle_write = [this, ioc, finalcall, data]( std::shared_ptr<boost::asio::io_context> )
+    {
+        DecrementOutstandingOperations( ioc );
+        if ( finalcall )
+        {
+            finalcall( data );
+        }
+    };
+
+    try
+    {
+        saver->SaveASync( ioc, handle_write, filePath, data, suffix );
+    }
+    catch ( ... )
+    {
+        DecrementOutstandingOperations( ioc );
+        throw;
+    }
+}
+
 shared_ptr<void> FileManager::LoadFile( const std::string &url, bool parse )
 {
     std::string prefix;
