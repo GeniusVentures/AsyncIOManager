@@ -108,11 +108,13 @@ public:
             * @param data - Buffer payload to save
             * @param ioc - ASIO context for async saving
             * @param finalcall - Filemanager callback on completion
+            * @param save_location - Output parameter for the resulting save location (file path, IPFS CID, etc.)
             */
         void SaveASync( const std::string                       &url,
                     ResultType                               data,
                     std::shared_ptr<boost::asio::io_context> ioc,
-                    FinalCallback                            finalcall );
+                    FinalCallback                            finalcall,
+                    std::shared_ptr<std::string>             save_location = nullptr );
 
     /// @brief Load a file given a filePath and optional parse the data
     /// @param url the full path and filename to load

@@ -23,7 +23,8 @@ namespace sgns
                                 std::function<void( std::shared_ptr<boost::asio::io_context> ioc )> handle_write,
                                 std::string                                                         filename,
                                 ResultType                                                          data,
-                                std::string                                                         suffix ) override;
+                                std::string                                                         suffix,
+                                std::shared_ptr<std::string>                                        save_location = nullptr ) override;
 
         /// @brief Set external bitswap instance for publishing content
         /// @param bitswap Shared pointer to bitswap instance

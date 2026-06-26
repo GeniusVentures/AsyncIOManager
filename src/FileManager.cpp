@@ -104,7 +104,8 @@ shared_ptr<void> FileManager::LoadASync( const std::string                      
 void FileManager::SaveASync( const std::string                       &url,
                              ResultType                               data,
                              std::shared_ptr<boost::asio::io_context> ioc,
-                             FinalCallback                            finalcall )
+                             FinalCallback                            finalcall,
+                             std::shared_ptr<std::string>             save_location )
 {
     std::string prefix;
     std::string filePath;
@@ -135,7 +136,7 @@ void FileManager::SaveASync( const std::string                       &url,
 
     try
     {
-        saver->SaveASync( ioc, handle_write, filePath, data, suffix );
+        saver->SaveASync( ioc, handle_write, filePath, data, suffix, save_location );
     }
     catch ( ... )
     {
