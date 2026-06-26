@@ -44,8 +44,8 @@ endforeach()
 include(../CommonCompilerOptions.CMake)
 
 # TODO: Check grpc install on Windows
-set(Protobuf_DIR  "${_THIRDPARTY_BUILD_DIR}/grpc/cmake")
-set(Protobuf_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include/google/protobuf")
+# set(Protobuf_DIR  "${_THIRDPARTY_BUILD_DIR}/grpc/cmake")
+# set(Protobuf_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include/google/protobuf")
 
 # --------------------------------------------------------
 # Set toolchain file

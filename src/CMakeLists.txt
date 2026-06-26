@@ -53,3 +53,13 @@ target_link_libraries(AsyncIOManager PRIVATE
 )
 include_directories(../include)
 
+# --------------------------------------------------------
+# Testing (gated behind BUILD_TESTING, default OFF)
+# --------------------------------------------------------
+option(BUILD_TESTING "Build tests" OFF)
+
+if(BUILD_TESTING)
+    find_package(GTest CONFIG REQUIRED)
+    enable_testing()
+    add_subdirectory(../test ${CMAKE_BINARY_DIR}/test)
+endif()

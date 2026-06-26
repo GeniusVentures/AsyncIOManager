@@ -17,25 +17,37 @@ include_directories(${GTest_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of protobuf project
-set(absl_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/absl")
+set(absl_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/absl")
 find_package(absl CONFIG REQUIRED)
-set(utf8_range_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/utf8_range")
+set(utf8_range_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/utf8_range")
 find_package(utf8_range CONFIG REQUIRED)
 
-if (NOT DEFINED Protobuf_DIR)
-    set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/protobuf")
+set(ZLIB_DIR "${_THIRDPARTY_BUILD_DIR}/zlib/lib/cmake/zlib")
+find_package(ZLIB CONFIG REQUIRED)
+# zlib
+set(ZLIB_ROOT "${_THIRDPARTY_BUILD_DIR}/zlib")
+
+# Prefer package config files while loading Libssh2's dependencies.
+# Libssh2 config calls `find_dependency(ZLIB)` without `CONFIG`, which can
+# otherwise resolve to CMake's FindZLIB module on Windows CI.
+set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED FALSE)
+if(DEFINED CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+    set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED TRUE)
+    set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV "${CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
 endif()
-if (NOT DEFINED grpc_INCLUDE_DIR)
-    set(grpc_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include")
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
+if (NOT DEFINED Protobuf_DIR)
+    set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
 endif()
 if (NOT DEFINED Protobuf_INCLUDE_DIR)
-    set(Protobuf_INCLUDE_DIR "${grpc_INCLUDE_DIR}/google/protobuf")
+    set(Protobuf_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/include/google/protobuf")
 endif()
 
 find_package(Protobuf CONFIG REQUIRED )
 
 if (NOT DEFINED PROTOC_EXECUTABLE)
-    set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/grpc/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
+    set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
 endif()
 
 set(Protobuf_PROTOC_EXECUTABLE ${PROTOC_EXECUTABLE} CACHE PATH "Initial cache" FORCE)
@@ -66,6 +78,10 @@ set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include" CACHE PATH "Path to OpenSSL inc
 
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
+
+# snappy
+set(Snappy_DIR "${_THIRDPARTY_BUILD_DIR}/snappy/lib/cmake/Snappy")
+find_package(Snappy CONFIG REQUIRED)
 
 # --------------------------------------------------------
 # Set config of rocksdb
@@ -221,10 +237,10 @@ include_directories(${ed25519_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of sr25519-donna
-set(sr25519-donna_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/lib/cmake/sr25519-donna")
-set(sr25519-donna_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/include")
-find_package(sr25519-donna CONFIG REQUIRED)
-include_directories(${sr25519-donna_INCLUDE_DIR})
+# set(sr25519-donna_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/lib/cmake/sr25519-donna")
+# set(sr25519-donna_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/include")
+# find_package(sr25519-donna CONFIG REQUIRED)
+# include_directories(${sr25519-donna_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set RapidJSON config path
@@ -263,11 +279,11 @@ set(MNN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../MNN/include")
 
 # ----------------------BUILD EXTERNAL PROJECT------------------
 # Set config of LIBSSH2
-#set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")
-#set(Libssh2_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib")
-#set(Libssh2_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/include")
-#find_package(Libssh2 CONFIG REQUIRED)
-#include_directories(${LIBSSH2_INCLUDE_DIR})
+set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")
+set(Libssh2_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib")
+set(Libssh2_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/include")
+find_package(Libssh2 CONFIG REQUIRED)
+include_directories(${LIBSSH2_INCLUDE_DIR})
 
 # --------------------------------------------------------
 include_directories(
