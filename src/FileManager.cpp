@@ -6,6 +6,7 @@
 #include "IPFSSaver.hpp"
 #include "HTTPLoader.hpp"
 #include "SFTPLoader.hpp"
+#include "SFTPSaver.hpp"
 #include "WSLoader.hpp"
 #include <bitswap.hpp>
 
@@ -36,6 +37,7 @@ void FileManager::InitializeSingletons()
     sgns::IPFSLoader::InitializeSingleton();
     sgns::IPFSSaver::InitializeSingleton();
     sgns::MNNSaver::InitializeSingleton();
+    sgns::SFTPSaver::InitializeSingleton();
 }
 
 shared_ptr<void> FileManager::LoadASync( const std::string                       &url,

@@ -2,6 +2,8 @@
 file(GLOB FILELOADER_HEADER "../include/*.h*")
 file(GLOB FILELOADER_SRCS "*.cpp")
 
+find_package(Libssh2 CONFIG REQUIRED)
+
 add_library(AsyncIOManager STATIC
     #${FILELOADER_SRCS}
     FILECommon.cpp
@@ -13,6 +15,7 @@ add_library(AsyncIOManager STATIC
     IPFSSaver.cpp
     MNNLoader.cpp
     MNNSaver.cpp
+    SFTPSaver.cpp
     URLStringUtil.cpp
     WSCommon.cpp
     WSLoader.cpp
@@ -46,6 +49,7 @@ target_link_libraries(AsyncIOManager PRIVATE
     ipfs-bitswap-proto
     ipfs-unixfs-proto
     ipfs-bitswap-cpp
+    Libssh2::libssh2
 )
 include_directories(../include)
 
