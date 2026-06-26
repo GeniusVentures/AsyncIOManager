@@ -63,7 +63,8 @@ namespace sgns
                               std::function<void( std::shared_ptr<boost::asio::io_context> ioc )> handle_write,
                               std::string                                                         filename,
                               ResultType                                                          data,
-                              std::string                                                         suffix )
+                              std::string                                                         suffix,
+                              std::shared_ptr<std::string>                                        save_location )
     {
         if ( data.value()->second.data() == nullptr )
         {
@@ -72,6 +73,12 @@ namespace sgns
         if ( filename.empty() )
         {
             filename = boost::lexical_cast<string>( ( boost::uuids::random_generator() )() ) + "/";
+        }
+
+        // Report the save location back to the caller
+        if ( save_location )
+        {
+            *save_location = "file://" + filename;
         }
 
         //size_t remainingWrites = data.first.size();

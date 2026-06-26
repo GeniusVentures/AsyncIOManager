@@ -47,7 +47,8 @@ namespace sgns
                                std::function<void( std::shared_ptr<boost::asio::io_context> ioc )> handle_write,
                                std::string                                                         filename,
                                ResultType                                                          data,
-                               std::string                                                         suffix )
+                               std::string                                                         suffix,
+                               std::shared_ptr<std::string>                                        save_location )
     {
         // Note: For IPFS, we ignore the filename path component (e.g., /test) and
         // republish the content structure as-is to preserve the original CID
@@ -118,6 +119,11 @@ namespace sgns
                                 m_logger->info( "Successfully published file '{}' to IPFS with CID: {}",
                                                 filePaths[0],
                                                 cidString.value() );
+                                // Report the CID back to the caller
+                                if ( save_location )
+                                {
+                                    *save_location = "ipfs://" + cidString.value();
+                                }
                             }
                             else
                             {
@@ -195,6 +201,11 @@ namespace sgns
                             {
                                 m_logger->info( "Successfully published directory to IPFS with root CID: {}",
                                                 cidString.value() );
+                                // Report the CID back to the caller
+                                if ( save_location )
+                                {
+                                    *save_location = "ipfs://" + cidString.value();
+                                }
                             }
                             else
                             {
