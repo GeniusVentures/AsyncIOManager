@@ -9,12 +9,36 @@
 #include <gtest/gtest.h>
 #include "FileManager.hpp"
 #include "testutil/asio_helpers.hpp"
+#include "testutil/bitswap_node.hpp"
 #include "testutil/test_fixture.hpp"
 
 using namespace sgns;
 
 class IPFSSaverEdgeTest : public FileManagerTestFixture
 {
+protected:
+    void SetUp() override
+    {
+        FileManagerTestFixture::SetUp();
+
+        try
+        {
+            node_ = std::make_unique<BitswapNode>();
+        }
+        catch ( const std::exception &e )
+        {
+            GTEST_SKIP() << "Cannot create BitswapNode: " << e.what();
+        }
+
+        FileManager::GetInstance().setBitswap( node_->getBitswap() );
+    }
+
+    void TearDown() override
+    {
+        node_.reset();
+    }
+
+    std::unique_ptr<BitswapNode> node_;
 };
 
 // ---------------------------------------------------------------------------
@@ -40,12 +64,11 @@ TEST_F( IPFSSaverEdgeTest, SaveASync_NullDataHandledGracefully )
     ASSERT_TRUE( ok ) << "Timed out — null data should still invoke callback";
 }
 
-TEST_F( IPFSSaverEdgeTest, SaveASync_NoExternalBitswapHandled )
+TEST_F( IPFSSaverEdgeTest, SaveASync_BasicSaveCompletes )
 {
     IOContextRunner runner;
 
-    // Note: bitswap may have been set by a previous integration test.
-    // This is fine — the save path handles both cases.
+    // bitswap is set in SetUp() — this test verifies the basic save path works.
 
     bool completed = false;
 
