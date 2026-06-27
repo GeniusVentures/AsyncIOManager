@@ -7,7 +7,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "IPFSSaver.hpp"
+#include "FileManager.hpp"
 #include "testutil/asio_helpers.hpp"
 #include "testutil/test_fixture.hpp"
 
@@ -44,11 +44,8 @@ TEST_F( IPFSSaverEdgeTest, SaveASync_NoExternalBitswapHandled )
 {
     IOContextRunner runner;
 
-    // Ensure no bitswap set
-    auto &saver = sgns::IPFSSaver::GetInstance();
-    // Note: cannot reset bitswap, but we can test the state
-    // If bitswap was set by a previous test, this is fine — it just means
-    // we can't test the "no bitswap" path in isolation
+    // Note: bitswap may have been set by a previous integration test.
+    // This is fine — the save path handles both cases.
 
     bool completed = false;
 
