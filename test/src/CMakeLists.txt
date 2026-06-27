@@ -58,18 +58,18 @@ if(ASYNC_IO_MANAGER_NETWORK_TESTS)
         OpenSSL::Crypto
     )
 
-    # # SFTPSaver tests — requires local sshd
-    # addtest(sftp_saver_test
-    #     sftp_saver_test.cpp
-    # )
-    # target_link_libraries(sftp_saver_test
-    #     AsyncIOManager
-    #     asiomgr_testutil
-    #     ${Boost_LIBRARIES}
-    #     Libssh2::libssh2
-    #     OpenSSL::SSL
-    #     OpenSSL::Crypto
-    # )
+    # SFTPSaver tests — requires local sshd
+    addtest(sftp_saver_test
+        sftp_saver_test.cpp
+    )
+    target_link_libraries(sftp_saver_test
+        AsyncIOManager
+        asiomgr_testutil
+        ${Boost_LIBRARIES}
+        Libssh2::libssh2
+        OpenSSL::SSL
+        OpenSSL::Crypto
+    )
 
     # # IPFS tests — local BitswapNode fixtures
     # addtest(ipfs_loader_test

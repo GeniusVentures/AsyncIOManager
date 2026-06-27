@@ -70,9 +70,20 @@ namespace sgns
 
             ip::tcp::resolver                            resolver( *ioc );
             boost::asio::ip::tcp::resolver::results_type resolvedaddr;
+
+            // Extract port from host if present (e.g., "127.0.0.1:2222" → host="127.0.0.1", port="2222")
+            std::string resolveHost = sftp_host_;
+            std::string resolvePort = "22";
+            auto        colonPos    = sftp_host_.rfind( ':' );
+            if ( colonPos != std::string::npos )
+            {
+                resolvePort = sftp_host_.substr( colonPos + 1 );
+                resolveHost = sftp_host_.substr( 0, colonPos );
+            }
+
             try
             {
-                resolvedaddr = resolver.resolve( sftp_host_, "22" );
+                resolvedaddr = resolver.resolve( resolveHost, resolvePort );
             }
             catch ( const boost::system::system_error &e )
             {
@@ -91,6 +102,14 @@ namespace sgns
                 std::cerr << "Unknown error occurred during address resolution." << std::endl;
                 DoWriteCallback( ioc );
                 return;
+            }
+
+            // Log resolved addresses for diagnostics
+            for ( const auto &ep : resolvedaddr )
+            {
+                std::cerr << "[SFTPSaver] Resolved " << resolveHost << ":" << resolvePort
+                          << " -> " << ep.endpoint().address().to_string()
+                          << ":" << ep.endpoint().port() << std::endl;
             }
 
             async_connect(
@@ -206,6 +225,8 @@ namespace sgns
             }
             else
             {
+                std::cerr << "[SFTPSaver] Auth failed: rc=" << auth_result
+                          << " user=" << sftp_user_ << " key=" << sftp_privkeyfile_ << std::endl;
                 DoWriteCallback( ioc );
             }
         }
@@ -485,7 +506,17 @@ namespace sgns
         // Create socket and connect
         boost::asio::io_context                 ioc;
         boost::asio::ip::tcp::resolver          resolver( ioc );
-        boost::asio::ip::tcp::resolver::results_type endpoints = resolver.resolve( sftp_host, "22" );
+
+        std::string resolveHost = sftp_host;
+        std::string resolvePort = "22";
+        auto        colonPos    = sftp_host.rfind( ':' );
+        if ( colonPos != std::string::npos )
+        {
+            resolvePort = sftp_host.substr( colonPos + 1 );
+            resolveHost = sftp_host.substr( 0, colonPos );
+        }
+
+        boost::asio::ip::tcp::resolver::results_type endpoints = resolver.resolve( resolveHost, resolvePort );
         boost::asio::ip::tcp::socket            socket( ioc );
         boost::asio::connect( socket, endpoints );
 
