@@ -90,21 +90,21 @@ if(ASYNC_IO_MANAGER_NETWORK_TESTS)
         Boost::boost
     )
 
-    # addtest(ipfs_saver_test
-    #     ipfs_saver_test.cpp
-    # )
-    # target_link_libraries(ipfs_saver_test
-    #     AsyncIOManager
-    #     asiomgr_testutil
-    #     ${Boost_LIBRARIES}
-    #     ipfs-bitswap-cpp
-    #     p2p::p2p_default_network
-    #     p2p::p2p_basic_host
-    #     p2p::p2p_multiaddress
-    #     p2p::p2p_kademlia
-    #     p2p::p2p_identify
-    #     p2p::p2p_identify_proto
-    #     spdlog::spdlog
-    #     Boost::boost
-    # )
+    addtest(ipfs_saver_test
+        ipfs_saver_test.cpp
+    )
+    target_link_libraries(ipfs_saver_test
+        AsyncIOManager
+        asiomgr_testutil
+        ${Boost_LIBRARIES}
+        ipfs-bitswap-cpp
+        p2p::p2p_default_network
+        p2p::p2p_basic_host
+        p2p::p2p_multiaddress
+        p2p::p2p_kademlia
+        p2p::p2p_identify
+        p2p::p2p_identify_proto
+        spdlog::spdlog
+        Boost::boost
+    )
 endif()
