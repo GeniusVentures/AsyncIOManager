@@ -19,22 +19,21 @@
 using namespace sgns;
 
 // ---------------------------------------------------------------------------
-// IPFS Tests — uses server + client BitswapNodes
+// IPFS Tests — uses server + client BitswapNodes (created once for the suite,
+// matching bitswap_server_client_test.cpp which reuses one node pair).
 // ---------------------------------------------------------------------------
 
 class IPFSIntegrationTest : public FileManagerTestFixture
 {
 protected:
-    void SetUp() override
+    static void SetUpTestSuite()
     {
-        FileManagerTestFixture::SetUp();
-
         try
         {
-            serverNode_ = std::make_unique<BitswapNode>();
+            s_serverNode = std::make_unique<BitswapNode>();
             // Give server time to initialize (matching reference test pattern)
             std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
-            clientNode_ = std::make_unique<BitswapNode>();
+            s_clientNode = std::make_unique<BitswapNode>();
         }
         catch ( const std::exception &e )
         {
@@ -42,23 +41,35 @@ protected:
         }
 
         // Manual peer discovery: add server to client's address repo
-        auto serverInfo = serverNode_->getPeerInfo();
-        auto &addrRepo  = clientNode_->getHost()->getPeerRepository().getAddressRepository();
+        auto serverInfo = s_serverNode->getPeerInfo();
+        auto &addrRepo  = s_clientNode->getHost()->getPeerRepository().getAddressRepository();
         addrRepo.upsertAddresses(
             serverInfo.id,
             gsl::span( serverInfo.addresses.data(), serverInfo.addresses.size() ),
             libp2p::peer::ttl::kDay );
     }
 
-    void TearDown() override
+    static void TearDownTestSuite()
     {
-        clientNode_.reset();
-        serverNode_.reset();
+        s_clientNode.reset();
+        s_serverNode.reset();
     }
 
-    std::unique_ptr<BitswapNode> serverNode_;
-    std::unique_ptr<BitswapNode> clientNode_;
+    void SetUp() override
+    {
+        FileManagerTestFixture::SetUp();
+    }
+
+    static BitswapNode &serverNode() { return *s_serverNode; }
+    static BitswapNode &clientNode() { return *s_clientNode; }
+
+private:
+    static std::unique_ptr<BitswapNode> s_serverNode;
+    static std::unique_ptr<BitswapNode> s_clientNode;
 };
+
+std::unique_ptr<BitswapNode> IPFSIntegrationTest::s_serverNode;
+std::unique_ptr<BitswapNode> IPFSIntegrationTest::s_clientNode;
 
 // ---------------------------------------------------------------------------
 // IPFSLoader: retrieve content from server
@@ -67,7 +78,7 @@ protected:
 TEST_F( IPFSIntegrationTest, Loader_RetrievesPublishedContent )
 {
     // Set bitswap on server side via FileManager
-    FileManager::GetInstance().setBitswap( serverNode_->getBitswap() );
+    FileManager::GetInstance().setBitswap( serverNode().getBitswap() );
 
     // 1. Server publishes content via FileManager → IPFSSaver
     {
@@ -93,8 +104,8 @@ TEST_F( IPFSIntegrationTest, Loader_RetrievesPublishedContent )
         ASSERT_TRUE( cid.has_value() ) << "Failed to decode CID from saveLoc";
 
         // Register server as provider on client bitswap so IPFSLoader can find it
-        FileManager::GetInstance().setBitswap( clientNode_->getBitswap() );
-        clientNode_->getBitswap()->AddProvider( cid.value(), serverNode_->getPeerInfo() );
+        FileManager::GetInstance().setBitswap( clientNode().getBitswap() );
+        clientNode().getBitswap()->AddProvider( cid.value(), serverNode().getPeerInfo() );
 
         // 2. Client retrieves content via FileManager → IPFSLoader
         // Use a fresh IOContextRunner — the save's runner may have stopped its context
@@ -137,26 +148,28 @@ TEST_F( IPFSIntegrationTest, Loader_RetrievesPublishedContent )
 TEST_F( IPFSIntegrationTest, Saver_PublishesAndReturnsCID )
 {
     // Set bitswap via FileManager (propagates to both IPFSSaver and IPFSLoader)
-    FileManager::GetInstance().setBitswap( serverNode_->getBitswap() );
+    FileManager::GetInstance().setBitswap( serverNode().getBitswap() );
 
-    IOContextRunner runner;
+    {
+        IOContextRunner runner;
 
-    bool                         completed = false;
-    std::shared_ptr<std::string> saveLoc   = std::make_shared<std::string>();
+        bool                         completed = false;
+        std::shared_ptr<std::string> saveLoc   = std::make_shared<std::string>();
 
-    auto data = makeSingleFileResult( "saver_test.bin", "ipfs saver test content" );
+        auto data = makeSingleFileResult( "saver_test.bin", "ipfs saver test content" );
 
-    FileManager::GetInstance().SaveASync(
-        "ipfs://test", data, runner.ioc(),
-        [&]( FileManager::ResultType ) { completed = true; },
-        saveLoc );
+        FileManager::GetInstance().SaveASync(
+            "ipfs://test", data, runner.ioc(),
+            [&]( FileManager::ResultType ) { completed = true; },
+            saveLoc );
 
-    ASSERT_TRUE( pollUntil( [&]() { return completed; }, std::chrono::seconds( 60 ) ) )
-        << "Timed out waiting for IPFS save";
+        ASSERT_TRUE( pollUntil( [&]() { return completed; }, std::chrono::seconds( 60 ) ) )
+            << "Timed out waiting for IPFS save";
 
-    EXPECT_FALSE( saveLoc->empty() );
-    // saveLoc should contain "ipfs://<CID>"
-    EXPECT_NE( saveLoc->find( "ipfs://" ), std::string::npos );
+        EXPECT_FALSE( saveLoc->empty() );
+        // saveLoc should contain "ipfs://<CID>"
+        EXPECT_NE( saveLoc->find( "ipfs://" ), std::string::npos );
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -165,53 +178,57 @@ TEST_F( IPFSIntegrationTest, Saver_PublishesAndReturnsCID )
 
 TEST_F( IPFSIntegrationTest, Loader_BadCIDReturnsError )
 {
-    IOContextRunner runner;
+    {
+        IOContextRunner runner;
 
-    bool                                  completed = false;
-    std::optional<FileManager::ResultType> received;
+        bool                                  completed = false;
+        std::optional<FileManager::ResultType> received;
 
-    // Set bitswap via FileManager (propagates to IPFSLoader)
-    FileManager::GetInstance().setBitswap( clientNode_->getBitswap() );
+        // Set bitswap via FileManager (propagates to IPFSLoader)
+        FileManager::GetInstance().setBitswap( clientNode().getBitswap() );
 
-    // Use an obviously invalid CID
-    FileManager::GetInstance().LoadASync(
-        "ipfs://invalid-cid/test.bin", false, false, runner.ioc(),
-        [&]( FileManager::ResultType buf )
-        {
-            received  = std::move( buf );
-            completed = true;
-        },
-        "" );
+        // Use an obviously invalid CID
+        FileManager::GetInstance().LoadASync(
+            "ipfs://invalid-cid/test.bin", false, false, runner.ioc(),
+            [&]( FileManager::ResultType buf )
+            {
+                received  = std::move( buf );
+                completed = true;
+            },
+            "" );
 
-    ASSERT_TRUE( pollUntil( [&]() { return completed; }, std::chrono::seconds( 10 ) ) )
-        << "Timed out waiting for error callback";
+        ASSERT_TRUE( pollUntil( [&]() { return completed; }, std::chrono::seconds( 10 ) ) )
+            << "Timed out waiting for error callback";
 
-    ASSERT_TRUE( received.has_value() );
-    EXPECT_FALSE( received->has_value() );
+        ASSERT_TRUE( received.has_value() );
+        EXPECT_FALSE( received->has_value() );
+    }
 }
 
 TEST_F( IPFSIntegrationTest, Loader_InvalidUrlReturnsError )
 {
-    IOContextRunner runner;
+    {
+        IOContextRunner runner;
 
-    bool                                  completed = false;
-    std::optional<FileManager::ResultType> received;
+        bool                                  completed = false;
+        std::optional<FileManager::ResultType> received;
 
-    FileManager::GetInstance().setBitswap( clientNode_->getBitswap() );
+        FileManager::GetInstance().setBitswap( clientNode().getBitswap() );
 
-    // Empty path should fail parsing inside IPFSLoader
-    FileManager::GetInstance().LoadASync(
-        "ipfs://", false, false, runner.ioc(),
-        [&]( FileManager::ResultType buf )
-        {
-            received  = std::move( buf );
-            completed = true;
-        },
-        "" );
+        // Empty path should fail parsing inside IPFSLoader
+        FileManager::GetInstance().LoadASync(
+            "ipfs://", false, false, runner.ioc(),
+            [&]( FileManager::ResultType buf )
+            {
+                received  = std::move( buf );
+                completed = true;
+            },
+            "" );
 
-    ASSERT_TRUE( pollUntil( [&]() { return completed; }, std::chrono::seconds( 10 ) ) )
-        << "Timed out waiting for error callback";
+        ASSERT_TRUE( pollUntil( [&]() { return completed; }, std::chrono::seconds( 10 ) ) )
+            << "Timed out waiting for error callback";
 
-    ASSERT_TRUE( received.has_value() );
-    EXPECT_FALSE( received->has_value() );
+        ASSERT_TRUE( received.has_value() );
+        EXPECT_FALSE( received->has_value() );
+    }
 }

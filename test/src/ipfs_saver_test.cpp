@@ -17,29 +17,34 @@ using namespace sgns;
 class IPFSSaverEdgeTest : public FileManagerTestFixture
 {
 protected:
-    void SetUp() override
+    static void SetUpTestSuite()
     {
-        FileManagerTestFixture::SetUp();
-
         try
         {
-            node_ = std::make_unique<BitswapNode>();
+            s_node = std::make_unique<BitswapNode>();
         }
         catch ( const std::exception &e )
         {
             GTEST_SKIP() << "Cannot create BitswapNode: " << e.what();
         }
-
-        FileManager::GetInstance().setBitswap( node_->getBitswap() );
+        FileManager::GetInstance().setBitswap( s_node->getBitswap() );
     }
 
-    void TearDown() override
+    static void TearDownTestSuite()
     {
-        node_.reset();
+        s_node.reset();
     }
 
-    std::unique_ptr<BitswapNode> node_;
+    void SetUp() override
+    {
+        FileManagerTestFixture::SetUp();
+    }
+
+private:
+    static std::unique_ptr<BitswapNode> s_node;
 };
+
+std::unique_ptr<BitswapNode> IPFSSaverEdgeTest::s_node;
 
 // ---------------------------------------------------------------------------
 // Null / empty data
@@ -47,57 +52,63 @@ protected:
 
 TEST_F( IPFSSaverEdgeTest, SaveASync_NullDataHandledGracefully )
 {
-    IOContextRunner runner;
+    {
+        IOContextRunner runner;
 
-    bool completed = false;
+        bool completed = false;
 
-    // ResultType with null shared_ptr inside
-    FileManager::ResultType nullResult = outcome::success(
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>( nullptr ) );
+        // ResultType with null shared_ptr inside
+        FileManager::ResultType nullResult = outcome::success(
+            std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>( nullptr ) );
 
-    // This should not crash; it should call handle_write
-    FileManager::GetInstance().SaveASync(
-        "ipfs://test", nullResult, runner.ioc(),
-        [&]( FileManager::ResultType ) { completed = true; } );
+        // This should not crash; it should call handle_write
+        FileManager::GetInstance().SaveASync(
+            "ipfs://test", nullResult, runner.ioc(),
+            [&]( FileManager::ResultType ) { completed = true; } );
 
-    bool ok = pollUntil( [&]() { return completed; }, std::chrono::seconds( 5 ) );
-    ASSERT_TRUE( ok ) << "Timed out — null data should still invoke callback";
+        bool ok = pollUntil( [&]() { return completed; }, std::chrono::seconds( 5 ) );
+        ASSERT_TRUE( ok ) << "Timed out — null data should still invoke callback";
+    }
 }
 
 TEST_F( IPFSSaverEdgeTest, SaveASync_BasicSaveCompletes )
 {
-    IOContextRunner runner;
+    {
+        IOContextRunner runner;
 
-    // bitswap is set in SetUp() — this test verifies the basic save path works.
+        // bitswap is set in SetUp() — this test verifies the basic save path works.
 
-    bool completed = false;
+        bool completed = false;
 
-    auto data = makeSingleFileResult( "test.bin", "content" );
+        auto data = makeSingleFileResult( "test.bin", "content" );
 
-    FileManager::GetInstance().SaveASync(
-        "ipfs://test", data, runner.ioc(),
-        [&]( FileManager::ResultType ) { completed = true; } );
+        FileManager::GetInstance().SaveASync(
+            "ipfs://test", data, runner.ioc(),
+            [&]( FileManager::ResultType ) { completed = true; } );
 
-    bool ok = pollUntil( [&]() { return completed; }, std::chrono::seconds( 5 ) );
-    ASSERT_TRUE( ok ) << "Timed out — callback should always fire";
+        bool ok = pollUntil( [&]() { return completed; }, std::chrono::seconds( 5 ) );
+        ASSERT_TRUE( ok ) << "Timed out — callback should always fire";
+    }
 }
 
 TEST_F( IPFSSaverEdgeTest, SaveASync_MismatchedPathsAndContentsHandled )
 {
-    IOContextRunner runner;
+    {
+        IOContextRunner runner;
 
-    // Different number of paths vs contents
-    std::vector<std::string>       paths    = { "a.txt", "b.txt" };
-    std::vector<std::vector<char>> contents = { { 'x' } };  // Only 1 content for 2 paths
+        // Different number of paths vs contents
+        std::vector<std::string>       paths    = { "a.txt", "b.txt" };
+        std::vector<std::vector<char>> contents = { { 'x' } };  // Only 1 content for 2 paths
 
-    bool completed = false;
+        bool completed = false;
 
-    auto data = makeMultiFileResult( paths, contents );
+        auto data = makeMultiFileResult( paths, contents );
 
-    FileManager::GetInstance().SaveASync(
-        "ipfs://test", data, runner.ioc(),
-        [&]( FileManager::ResultType ) { completed = true; } );
+        FileManager::GetInstance().SaveASync(
+            "ipfs://test", data, runner.ioc(),
+            [&]( FileManager::ResultType ) { completed = true; } );
 
-    bool ok = pollUntil( [&]() { return completed; }, std::chrono::seconds( 5 ) );
-    ASSERT_TRUE( ok ) << "Timed out — callback should fire even with mismatch";
+        bool ok = pollUntil( [&]() { return completed; }, std::chrono::seconds( 5 ) );
+        ASSERT_TRUE( ok ) << "Timed out — callback should fire even with mismatch";
+    }
 }
