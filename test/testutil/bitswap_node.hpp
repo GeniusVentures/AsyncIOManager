@@ -19,8 +19,10 @@
 #include <libp2p/peer/peer_repository.hpp>
 #include <libp2p/peer/address_repository.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
+#include <libp2p/log/configurator.hpp>
 
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <stdexcept>
@@ -30,6 +32,34 @@ class BitswapNode
 public:
     BitswapNode()
     {
+        // Initialize libp2p logging once (matching bitswap_server_client_test.cpp)
+        static std::once_flag logInitFlag;
+        std::call_once( logInitFlag, []()
+        {
+            const std::string logger_config( R"(
+# ----------------
+sinks:
+  - name: console
+    type: console
+    color: false
+groups:
+  - name: main
+    sink: console
+    level: info
+    children:
+      - name: libp2p
+        level: warn
+# ----------------
+            )" );
+
+            auto logging_system = std::make_shared<soralog::LoggingSystem>(
+                std::make_shared<soralog::ConfiguratorFromYAML>(
+                    std::make_shared<libp2p::log::Configurator>(),
+                    logger_config ) );
+            auto r = logging_system->configure();
+            libp2p::log::setLoggingSystem( logging_system );
+        } );
+
         namespace di = boost::di;
 
         // Crypto setup — matching bitswap_server_client_test.cpp pattern
@@ -86,8 +116,9 @@ public:
             host_, protocol_config, injector );
         protocols.identify->start();
 
-        // Listen on random port
-        auto ma = libp2p::multi::Multiaddress::create( "/ip4/127.0.0.1/tcp/0" ).value();
+        // Listen on random port — use 0.0.0.0 (matching reference) so getAddresses()
+        // returns usable addresses for peer-to-peer connections.
+        auto ma = libp2p::multi::Multiaddress::create( "/ip4/0.0.0.0/tcp/0" ).value();
         auto listenResult = host_->listen( ma );
         if ( !listenResult )
         {
@@ -119,6 +150,7 @@ public:
         {
             io_thread_.join();
         }
+        // bitswap_ and event_bus_ are destroyed naturally after IO drains
     }
 
     BitswapNode( const BitswapNode & )            = delete;
@@ -130,7 +162,7 @@ public:
 
     libp2p::peer::PeerInfo getPeerInfo() const
     {
-        auto addresses = host_->getAddresses();
+        auto addresses = host_->getAddressesInterfaces();
         return { host_->getId(), addresses };
     }
 
