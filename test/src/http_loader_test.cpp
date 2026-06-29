@@ -2,15 +2,18 @@
  * Tests for HTTPLoader — HTTPS file loading via FileManager.
  * Gated behind ASYNC_IO_MANAGER_NETWORK_TESTS=ON.
  *
- * Starts an embedded Boost.Beast HTTP server on localhost for tests.
+ * Starts an embedded Boost.Beast HTTPS server on localhost with a
+ * self-signed certificate for tests.
  */
 
 #include <gtest/gtest.h>
 #include "FileManager.hpp"
+#include "HTTPCommon.hpp"
 #include "testutil/asio_helpers.hpp"
 #include "testutil/test_fixture.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <thread>
@@ -19,20 +22,28 @@
 
 namespace beast = boost::beast;
 namespace http  = beast::http;
+namespace ssl   = boost::asio::ssl;
 using tcp       = boost::asio::ip::tcp;
 
 // ---------------------------------------------------------------------------
-// Embedded HTTP test server
+// Embedded HTTPS test server (self-signed cert)
 // ---------------------------------------------------------------------------
 
-class TestHttpServer
+class TestHttpsServer
 {
 public:
-    TestHttpServer()
+    TestHttpsServer()
     {
         ioc_      = std::make_shared<boost::asio::io_context>();
         acceptor_ = std::make_shared<tcp::acceptor>( *ioc_, tcp::endpoint{ tcp::v4(), 0 } );
         port_     = acceptor_->local_endpoint().port();
+
+        // Set up SSL context with self-signed cert
+        ssl_ctx_ = std::make_shared<ssl::context>( ssl::context::tls );
+        ssl_ctx_->set_options( ssl::context::default_workarounds | ssl::context::no_sslv2 |
+                               ssl::context::no_sslv3 );
+        ssl_ctx_->use_certificate_chain_file( std::string( TEST_CERT_DIR ) + "/cert.pem" );
+        ssl_ctx_->use_private_key_file( std::string( TEST_CERT_DIR ) + "/key.pem", ssl::context::pem );
 
         // Signal that we're ready to accept
         std::promise<void> ready;
@@ -40,16 +51,14 @@ public:
 
         serverThread_ = std::thread( [this, p = std::move( ready )]() mutable
         {
-            // Notify caller that the acceptor is open
             p.set_value();
-            ioc_->run();
+            acceptLoop();
         } );
 
-        // Wait until the server thread is actually running
         readyFlag.wait();
     }
 
-    ~TestHttpServer()
+    ~TestHttpsServer()
     {
         boost::system::error_code ec;
         acceptor_->close( ec );
@@ -64,25 +73,44 @@ public:
 
     void startAccept()
     {
-        auto socket = std::make_shared<tcp::socket>( *ioc_ );
-        acceptor_->async_accept( *socket, [this, socket]( boost::system::error_code ec )
-        {
-            if ( !ec )
-            {
-                handleRequest( std::move( *socket ) );
-                startAccept();  // Accept next connection
-            }
-        } );
+        // acceptLoop() already runs directly on the server thread.
+        // No-op: the server is ready as soon as the constructor returns.
     }
 
 private:
-    void handleRequest( tcp::socket socket )
+    void acceptLoop()
+    {
+        while ( true )
+        {
+            boost::system::error_code ec;
+            tcp::socket               sock( *ioc_ );
+
+            acceptor_->accept( sock, ec );
+            if ( ec )
+                break;  // Acceptor closed or other error — stop
+
+            // Wrap accepted socket in SSL
+            ssl::stream<tcp::socket> stream( std::move( sock ), *ssl_ctx_ );
+
+            // SSL handshake (server side)
+            stream.handshake( ssl::stream_base::server, ec );
+            if ( ec )
+                continue;  // Handshake failed — skip this connection
+
+            handleRequest( stream );
+
+            // Graceful SSL shutdown
+            stream.shutdown( ec );
+        }
+    }
+
+    void handleRequest( ssl::stream<tcp::socket> &stream )
     {
         try
         {
             beast::flat_buffer               buffer;
             http::request<http::string_body> req;
-            http::read( socket, buffer, req );
+            http::read( stream, buffer, req );
 
             http::response<http::string_body> res;
 
@@ -90,7 +118,7 @@ private:
             {
                 res.result( http::status::ok );
                 res.set( http::field::content_type, "application/octet-stream" );
-                res.body() = "hello from test http server";
+                res.body() = "hello from test https server";
             }
             else
             {
@@ -99,8 +127,7 @@ private:
             }
 
             res.prepare_payload();
-            http::write( socket, res );
-            socket.shutdown( tcp::socket::shutdown_send );
+            http::write( stream, res );
         }
         catch ( ... )
         {
@@ -110,6 +137,7 @@ private:
 
     std::shared_ptr<boost::asio::io_context> ioc_;
     std::shared_ptr<tcp::acceptor>           acceptor_;
+    std::shared_ptr<ssl::context>            ssl_ctx_;
     uint16_t                                 port_ = 0;
     std::thread                              serverThread_;
 };
@@ -124,27 +152,27 @@ protected:
     void SetUp() override
     {
         FileManagerTestFixture::SetUp();
-        server_ = std::make_unique<TestHttpServer>();
+        // Accept self-signed cert for the embedded test server
+        sgns::HTTPDevice::SetVerifyPeer( false );
+        server_ = std::make_unique<TestHttpsServer>();
         server_->startAccept();
     }
 
     void TearDown() override
     {
         server_.reset();
+        // Restore default verification
+        sgns::HTTPDevice::SetVerifyPeer( true );
     }
 
-    std::unique_ptr<TestHttpServer> server_;
+    std::unique_ptr<TestHttpsServer> server_;
 };
 
 // ---------------------------------------------------------------------------
-// NOTE: Happy-path HTTPS download requires an SSL-enabled server.
-// The embedded server is plain HTTP; the HTTPLoader ("https" prefix) does SSL.
-// A full integration test would need a self-signed cert on the test server.
-// For now, the test validates that the HTTPLoader connects and gets a result
-// (SSL handshake will fail against plain HTTP, producing an error result).
+// Happy path: full HTTPS roundtrip with self-signed cert
 // ---------------------------------------------------------------------------
 
-TEST_F( HTTPLoaderTest, LoadASync_ConnectsToServer )
+TEST_F( HTTPLoaderTest, LoadASync_DownloadsOverHttps )
 {
     IOContextRunner runner;
 
@@ -164,10 +192,17 @@ TEST_F( HTTPLoaderTest, LoadASync_ConnectsToServer )
         "" );
 
     bool ok = pollUntil( [&]() { return completed; }, std::chrono::seconds( 10 ) );
-    ASSERT_TRUE( ok ) << "Timed out waiting for HTTP result";
+    ASSERT_TRUE( ok ) << "Timed out waiting for HTTPS result";
 
-    // Callback should fire (even if SSL handshake fails)
     ASSERT_TRUE( received.has_value() );
+    ASSERT_TRUE( received->has_value() ) << "HTTPS download should succeed";
+
+    auto &[paths, contents] = *( received->value() );
+    ASSERT_EQ( paths.size(), 1u );
+    EXPECT_EQ( paths[0], "data.bin" );   // HTTPLoader uses p.filename() — strips directory
+    ASSERT_EQ( contents.size(), 1u );
+    std::string body( contents[0].begin(), contents[0].end() );
+    EXPECT_EQ( body, "hello from test https server" );
 }
 
 // ---------------------------------------------------------------------------

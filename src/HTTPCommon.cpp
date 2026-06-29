@@ -27,6 +27,8 @@ namespace sgns
 {
     using namespace boost::asio;
 
+    bool HTTPDevice::s_verify_peer = true;
+
     HTTPDevice::HTTPDevice( std::string http_host, std::string http_path, std::string http_port, bool parse, bool save )
     {
         http_host_ = http_host;
@@ -45,7 +47,7 @@ namespace sgns
         try
         {
             m_logger->info( "Resolving Address" );
-            boost::asio::ip::tcp::resolver::results_type results = resolver.resolve( http_host_, "https" );
+            boost::asio::ip::tcp::resolver::results_type results = resolver.resolve( http_host_, http_port_ );
             endpoint                                             = *results.begin();
         }
         catch ( const boost::system::system_error &e )
@@ -79,6 +81,12 @@ namespace sgns
         //Disclude certain older insecure options
         ssl_context->set_options( boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 |
                                   boost::asio::ssl::context::no_sslv3 );
+
+        // ponytail: global toggle so tests with self-signed certs can disable verification
+        if ( !s_verify_peer )
+        {
+            ssl_context->set_verify_mode( boost::asio::ssl::verify_none );
+        }
 
         //Create Socket with SSL Context
         auto socket = std::make_shared<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>( *ioc, *ssl_context );
