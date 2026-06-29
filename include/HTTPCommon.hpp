@@ -78,6 +78,11 @@ namespace sgns
 		 */
         void StartHTTPDownload( std::shared_ptr<boost::asio::io_context> ioc, CompletionCallback handle_read );
 
+        /// @brief Globally disable SSL peer verification (for testing with self-signed certs).
+        /// Default is true. Set to false before any HTTPDevice use.
+        static void SetVerifyPeer( bool verify ) { s_verify_peer = verify; }
+        static bool GetVerifyPeer() { return s_verify_peer; }
+
     private:
         /**
 		 * Post HTTP Get to download file
@@ -98,5 +103,7 @@ namespace sgns
         bool        parse_;
         bool        save_;
         bool        downloading_ = false;
+
+        static bool s_verify_peer;
     };
 }
