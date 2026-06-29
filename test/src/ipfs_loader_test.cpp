@@ -11,7 +11,6 @@
 #include "FileManager.hpp"
 #include "testutil/asio_helpers.hpp"
 #include "testutil/bitswap_node.hpp"
-#include "testutil/temp_file.hpp"
 #include "testutil/test_fixture.hpp"
 
 #include <gsl/span>
@@ -33,6 +32,8 @@ protected:
         try
         {
             serverNode_ = std::make_unique<BitswapNode>();
+            // Give server time to initialize (matching reference test pattern)
+            std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
             clientNode_ = std::make_unique<BitswapNode>();
         }
         catch ( const std::exception &e )
@@ -65,52 +66,68 @@ protected:
 
 TEST_F( IPFSIntegrationTest, Loader_RetrievesPublishedContent )
 {
-    // 1. Server publishes a single file
-    TempFile tf( "ipfs loader test content" );
+    // Set bitswap on server side via FileManager
+    FileManager::GetInstance().setBitswap( serverNode_->getBitswap() );
 
-    bool                       publishDone  = false;
-    std::optional<ipfs_bitswap::CID> publishedCid;
+    // 1. Server publishes content via FileManager → IPFSSaver
+    {
+        IOContextRunner             runner;
+        bool                        saveDone = false;
+        std::shared_ptr<std::string> saveLoc  = std::make_shared<std::string>();
 
-    serverNode_->getBitswap()->PublishFile(
-        tf.pathString(),
-        [&]( libp2p::outcome::result<ipfs_bitswap::CID> result )
-        {
-            if ( result.has_value() )
+        auto data = makeSingleFileResult( "published.bin", "ipfs loader test content" );
+
+        FileManager::GetInstance().SaveASync(
+            "ipfs://published.bin", data, runner.ioc(),
+            [&]( FileManager::ResultType ) { saveDone = true; },
+            saveLoc );
+
+        ASSERT_TRUE( pollUntil( [&]() { return saveDone; }, std::chrono::seconds( 60 ) ) )
+            << "Timed out waiting for IPFS publish via FileManager";
+        ASSERT_FALSE( saveLoc->empty() ) << "saveLoc should contain ipfs://<CID>";
+        ASSERT_NE( saveLoc->find( "ipfs://" ), std::string::npos );
+
+        // Extract CID from saveLoc ("ipfs://<CID>") and register server as provider
+        std::string cidStr = saveLoc->substr( 7 );  // strip "ipfs://"
+        auto        cid    = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+        ASSERT_TRUE( cid.has_value() ) << "Failed to decode CID from saveLoc";
+
+        // Register server as provider on client bitswap so IPFSLoader can find it
+        FileManager::GetInstance().setBitswap( clientNode_->getBitswap() );
+        clientNode_->getBitswap()->AddProvider( cid.value(), serverNode_->getPeerInfo() );
+
+        // 2. Client retrieves content via FileManager → IPFSLoader
+        // Use a fresh IOContextRunner — the save's runner may have stopped its context
+        IOContextRunner                  loadRunner;
+        bool                             loadDone = false;
+        std::optional<FileManager::ResultType> received;
+
+        // LoadASync needs "ipfs://<CID>/<filename>" — parseIPFSUrl requires the '/'
+        std::string loadUrl = *saveLoc + "/published.bin";
+
+        FileManager::GetInstance().LoadASync(
+            loadUrl,
+            false, false, loadRunner.ioc(),
+            [&]( FileManager::ResultType result )
             {
-                publishedCid = result.value();
-            }
-            publishDone = true;
-        } );
+                received = std::move( result );
+                loadDone = true;
+            },
+            "" );
 
-    ASSERT_TRUE( pollUntil( [&]() { return publishDone; }, std::chrono::seconds( 60 ) ) )
-        << "Timed out waiting for publish";
-    ASSERT_TRUE( publishedCid.has_value() ) << "Publish completed but no CID returned";
+        ASSERT_TRUE( pollUntil( [&]() { return loadDone; }, std::chrono::seconds( 60 ) ) )
+            << "Timed out waiting for IPFS retrieve via FileManager";
 
-    // 2. Client retrieves it
-    auto serverInfo = serverNode_->getPeerInfo();
+        // 3. Verify content
+        ASSERT_TRUE( received.has_value() );
+        ASSERT_TRUE( received->has_value() );
+        ASSERT_NE( received->value(), nullptr );
+        ASSERT_FALSE( received->value()->second.empty() );
 
-    bool                         retrieveDone = false;
-    ipfs_bitswap::UnixFSContent  retrievedContent;
-
-    clientNode_->getBitswap()->RequestContent(
-        serverInfo, *publishedCid,
-        [&]( libp2p::outcome::result<ipfs_bitswap::UnixFSContent> result )
-        {
-            if ( result.has_value() )
-            {
-                retrievedContent = result.value();
-            }
-            retrieveDone = true;
-        } );
-
-    ASSERT_TRUE( pollUntil( [&]() { return retrieveDone; }, std::chrono::seconds( 60 ) ) )
-        << "Timed out waiting for retrieval";
-
-    // 3. Verify content
-    ASSERT_FALSE( retrievedContent.files.empty() );
-    std::string retrievedStr( retrievedContent.files[0].content.data(),
-                              retrievedContent.files[0].content.size() );
-    EXPECT_EQ( retrievedStr, "ipfs loader test content" );
+        std::string retrievedStr( received->value()->second[0].data(),
+                                  received->value()->second[0].size() );
+        EXPECT_EQ( retrievedStr, "ipfs loader test content" );
+    }
 }
 
 // ---------------------------------------------------------------------------
