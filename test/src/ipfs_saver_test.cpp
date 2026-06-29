@@ -19,6 +19,9 @@ class IPFSSaverEdgeTest : public FileManagerTestFixture
 protected:
     static void SetUpTestSuite()
     {
+        // Must initialize singletons before setBitswap (SetUp hasn't run yet)
+        FileManager::InitializeSingletons();
+
         try
         {
             s_node = std::make_unique<BitswapNode>();
