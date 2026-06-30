@@ -243,6 +243,12 @@ std::shared_ptr<int> FileManager::GetOutstandingOperationsPointer()
 
 void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
 {
+    // Store cache dir for local persistence
+    if ( bitswap )
+    {
+        cacheDir_ = bitswap->getCacheDir();
+    }
+
     // Forward bitswap instance to IPFSLoader
     auto ipfsLoaderIter = loaders.find( "ipfs" );
     if ( ipfsLoaderIter != loaders.end() )
@@ -282,4 +288,9 @@ void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitsw
     {
         m_logger->warn( "IPFS saver not registered, cannot set bitswap" );
     }
+}
+
+std::string FileManager::getCacheDir() const
+{
+    return cacheDir_;
 }

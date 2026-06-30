@@ -46,6 +46,8 @@ private:
 
     int outstandingOperations_ = 0;
 
+    std::string cacheDir_; ///< Disk cache directory from bitswap (for local persistence).
+
 public:
     static void InitializeSingletons();
     using ResultType =
@@ -136,4 +138,8 @@ public:
     /// @brief Set bitswap instance for IPFS operations
     /// @param bitswap Shared pointer to existing bitswap instance to reuse
     void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+
+    /// @brief Get the disk cache directory used by bitswap (empty if not configured)
+    /// @return Cache directory path, or empty string
+    std::string getCacheDir() const;
 };
