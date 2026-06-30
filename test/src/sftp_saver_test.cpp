@@ -102,10 +102,12 @@ public:
         std::string hostKeyNative  = hostKeyFile_.string();
         std::string pidFileNative  = ( serverDir_ / "sshd.pid" ).string();
         std::string authKeysNative = ( serverDir_ / "authorized_keys" ).string();
+        std::string dataDirNative  = dataDir_.string();
 #ifdef _WIN32
         for ( auto &c : hostKeyNative ) if ( c == '\\' ) c = '/';
         for ( auto &c : pidFileNative ) if ( c == '\\' ) c = '/';
         for ( auto &c : authKeysNative ) if ( c == '\\' ) c = '/';
+        for ( auto &c : dataDirNative ) if ( c == '\\' ) c = '/';
 #endif
 
         std::ofstream cfg( configFile_ );
@@ -114,9 +116,10 @@ public:
             << "HostKey " << hostKeyNative << "\n"
             << "PidFile " << pidFileNative << "\n"
             << "PubkeyAuthentication yes\n"
+            << "AuthenticationMethods publickey\n"
             << "PasswordAuthentication no\n"
             << "AuthorizedKeysFile " << authKeysNative << "\n"
-            << "Subsystem sftp internal-sftp\n"
+            << "Subsystem sftp internal-sftp -d " << dataDirNative << "\n"
             << "StrictModes no\n";
         cfg.close();
 
@@ -293,11 +296,11 @@ public:
 
     std::string sftpUrl( const std::string &remotePath ) const
     {
-        // Key-based auth: privkey_identifier<path> in the password field.
+        // Key-based auth: privkey_identifier:<path> in the password field.
         // Convert backslashes for libssh2 compatibility.
         std::string keyPath = keyFile_.string();
         for ( auto &c : keyPath ) if ( c == '\\' ) c = '/';
-        return user() + ":privkey_identifier" + keyPath + "@" + host()
+        return user() + ":privkey_identifier:" + keyPath + "@" + host()
              + ":" + std::to_string( port_ ) + remotePath;
     }
 
@@ -368,7 +371,7 @@ TEST_F( SFTPSaverTest, SaveASync_UploadsFile )
     auto data = makeSingleFileResult( "uploaded_test.bin", "sftp upload test content" );
 
     FileManager::GetInstance().SaveASync(
-        "sftp://" + server_->sftpUrl( "/uploaded_test.bin" ),
+        "sftp://" + server_->sftpUrl( "/" ),
         data, runner.ioc(),
         [&]( FileManager::ResultType ) { completed = true; },
         saveLoc );

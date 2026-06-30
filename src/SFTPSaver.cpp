@@ -151,6 +151,7 @@ namespace sgns
 
             if ( rc == 0 )
             {
+                std::cerr << "[SFTPSaver] Handshake OK" << std::endl;
                 StartSFTPAuth( ioc, sftp2session, tcpSocket );
             }
             else if ( rc == LIBSSH2_ERROR_EAGAIN )
@@ -166,12 +167,14 @@ namespace sgns
                         }
                         else
                         {
+                            std::cerr << "[SFTPSaver] Handshake EAGAIN wait failed: " << ec.message() << std::endl;
                             self->DoWriteCallback( ioc );
                         }
                     } );
             }
             else
             {
+                std::cerr << "[SFTPSaver] Handshake failed: rc=" << rc << std::endl;
                 DoWriteCallback( ioc );
             }
         }
@@ -204,6 +207,7 @@ namespace sgns
 
             if ( auth_result == 0 )
             {
+                std::cerr << "[SFTPSaver] Auth OK" << std::endl;
                 StartCreateSFTP( ioc, sftp2session, tcpSocket );
             }
             else if ( auth_result == LIBSSH2_ERROR_EAGAIN )
@@ -219,6 +223,7 @@ namespace sgns
                         }
                         else
                         {
+                            std::cerr << "[SFTPSaver] Auth EAGAIN wait failed: " << ec.message() << std::endl;
                             self->DoWriteCallback( ioc );
                         }
                     } );
@@ -252,17 +257,20 @@ namespace sgns
                             }
                             else
                             {
+                                std::cerr << "[SFTPSaver] SFTP init EAGAIN wait failed: " << ec.message() << std::endl;
                                 self->DoWriteCallback( ioc );
                             }
                         } );
                 }
                 else
                 {
+                    std::cerr << "[SFTPSaver] SFTP init failed: rc=" << sftp_error_code << std::endl;
                     DoWriteCallback( ioc );
                 }
             }
             else
             {
+                std::cerr << "[SFTPSaver] SFTP init OK" << std::endl;
                 StartSFTPOpen( ioc, sftp2session, tcpSocket, sftp );
             }
         }
@@ -296,17 +304,21 @@ namespace sgns
                             }
                             else
                             {
+                                std::cerr << "[SFTPSaver] SFTP open EAGAIN wait failed: " << ec.message() << std::endl;
                                 self->DoWriteCallback( ioc );
                             }
                         } );
                 }
                 else
                 {
+                    std::cerr << "[SFTPSaver] SFTP open failed: rc=" << sftp_error_code
+                              << " path=" << fullPath << std::endl;
                     DoWriteCallback( ioc );
                 }
             }
             else
             {
+                std::cerr << "[SFTPSaver] SFTP open OK, path=" << fullPath << std::endl;
                 // Report the save location
                 if ( save_location_ )
                 {
