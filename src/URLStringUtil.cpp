@@ -141,7 +141,10 @@ extern bool parseSFTPUrl( std::string  url,
         // If "pubkey_identifier" is not found, then we have no key
         if ( index != std::string::npos )
         {
-            publickey_file = pass.substr( index + 17, pass.length() );
+            size_t start = index + 17;  // strlen("pubkey_identifier")
+            if ( start < pass.length() && pass[start] == ':' )
+                start++;  // skip optional separator
+            publickey_file = pass.substr( start, pass.length() );
             pass           = "";
         }
 
@@ -150,7 +153,10 @@ extern bool parseSFTPUrl( std::string  url,
         // If "privkey_identifier" is not found, then we have no private key
         if ( index != std::string::npos )
         {
-            privatekey_file = pass.substr( index + 18, pass.length() );
+            size_t start = index + 18;  // strlen("privkey_identifier")
+            if ( start < pass.length() && pass[start] == ':' )
+                start++;  // skip optional separator
+            privatekey_file = pass.substr( start, pass.length() );
             pass            = "";
         }
 
