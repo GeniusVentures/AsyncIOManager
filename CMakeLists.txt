@@ -32,6 +32,7 @@ find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${GSL_INCLUDE_DIR})
 find_package(MNN CONFIG REQUIRED)
+include_directories(${MNN_INCLUDE_DIR})
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
@@ -46,27 +47,22 @@ find_package(ipfs-lite-cpp CONFIG REQUIRED)
 include_directories(${ipfs-lite-cpp_INCLUDE_DIR} ${CBOR_INCLUDE_DIR})
 find_package(ipfs-bitswap-cpp CONFIG REQUIRED)
 include_directories(${ipfs-bitswap-cpp_INCLUDE_DIR})
-include_directories(${MNN_INCLUDE_DIR})
-#find_package(Libssh2 CONFIG REQUIRED)
-#include_directories(${libssh2_INCLUDE_DIR})
+find_package(libssh2 CONFIG REQUIRED)
 
+option(BUILD_TESTING "Build tests" OFF)
 if(BUILD_TESTING)
+    enable_testing()
     find_package(GTest CONFIG REQUIRED)
 endif()
 
-# ---------------------------
-# Set version
 set(VERSION_STRING 0)
 set(SUBVERSION_STRING 1)
 
-# Set source file dir
 set(PROJECT.Path ${CMAKE_SOURCE_DIR}/src)
 set(PROJECT.Source_DIR
     ${PROJECT.Path}
 )
 
-# -----------------------------------
-# Include external plugin need
 include_directories(
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/include

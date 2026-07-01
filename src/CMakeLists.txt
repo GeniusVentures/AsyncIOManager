@@ -1,11 +1,4 @@
-#add_subdirectory(application)
-file(GLOB FILELOADER_HEADER "../include/*.h*")
-file(GLOB FILELOADER_SRCS "*.cpp")
-
-find_package(Libssh2 CONFIG REQUIRED)
-
 add_library(AsyncIOManager STATIC
-    #${FILELOADER_SRCS}
     FILECommon.cpp
     FileManager.cpp
     HTTPCommon.cpp
@@ -22,11 +15,10 @@ add_library(AsyncIOManager STATIC
     asiomgr-logger.cpp
 )
 
-target_link_libraries(AsyncIOManager PRIVATE
-    spdlog::spdlog
+target_link_libraries(AsyncIOManager
+    PUBLIC
     ${Boost_LIBRARIES}
-    OpenSSL::SSL
-    OpenSSL::Crypto
+    spdlog::spdlog
     p2p::p2p_logger
     p2p::p2p_default_network
     p2p::p2p_cares
@@ -46,20 +38,16 @@ target_link_libraries(AsyncIOManager PRIVATE
     ipfs-lite-cpp::ipfs_datastore_in_memory
     ipfs-lite-cpp::ipfs_datastore_rocksdb
     ipfs-lite-cpp::ipfs_kad_dht
+    libssh2::libssh2
+    PRIVATE
+    OpenSSL::SSL
+    OpenSSL::Crypto
     ipfs-bitswap-proto
     ipfs-unixfs-proto
     ipfs-bitswap-cpp
-    Libssh2::libssh2
 )
 include_directories(../include)
 
-# --------------------------------------------------------
-# Testing (gated behind BUILD_TESTING, default OFF)
-# --------------------------------------------------------
-option(BUILD_TESTING "Build tests" OFF)
-
 if(BUILD_TESTING)
-    find_package(GTest CONFIG REQUIRED)
-    enable_testing()
     add_subdirectory(../test ${CMAKE_BINARY_DIR}/test)
 endif()
