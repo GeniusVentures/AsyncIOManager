@@ -7,7 +7,6 @@
 #include <memory>
 #include <string>
 #include "FileLoader.hpp"
-//#include "MNNCommon.hpp"
 #include "ASIOSingleton.hpp"
 
 namespace sgns
