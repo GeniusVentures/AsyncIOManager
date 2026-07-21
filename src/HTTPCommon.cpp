@@ -3,6 +3,46 @@
  */
 #include "HTTPCommon.hpp"
 
+#include <atomic>
+#include <chrono>
+
+namespace
+{
+    using SslSocket = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
+
+    struct Deadline
+    {
+        std::shared_ptr<boost::asio::steady_timer> timer;
+        std::shared_ptr<std::atomic_bool>          expired;
+    };
+
+    Deadline ArmDeadline( const std::shared_ptr<boost::asio::io_context> &ioc,
+                          const std::shared_ptr<SslSocket>               &socket,
+                          std::chrono::seconds                            timeout )
+    {
+        Deadline deadline{ std::make_shared<boost::asio::steady_timer>( *ioc ),
+                           std::make_shared<std::atomic_bool>( false ) };
+        deadline.timer->expires_after( timeout );
+        deadline.timer->async_wait(
+            [timer = deadline.timer, socket, expired = deadline.expired]( const boost::system::error_code &error )
+            {
+                if ( !error )
+                {
+                    expired->store( true );
+                    boost::system::error_code ignored;
+                    socket->lowest_layer().cancel( ignored );
+                }
+            } );
+        return deadline;
+    }
+
+    void CancelDeadline( const Deadline &deadline )
+    {
+        boost::system::error_code ignored;
+        deadline.timer->cancel( ignored );
+    }
+}
+
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, HTTPDevice::Error, e )
 {
     switch ( e )
@@ -19,6 +59,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, HTTPDevice::Error, e )
             return "HTTP Data Read failed. No header.";
         case sgns::HTTPDevice::Error::REQ_FAILED:
             return "HTTP Data Read failed. Get Request Fail.";
+        case sgns::HTTPDevice::Error::TIMEOUT:
+            return "HTTP operation timed out";
     }
     return "Unknown error";
 }
@@ -42,13 +84,13 @@ namespace sgns
     {
         //Get DNS result for hostname
 
-        boost::asio::ip::tcp::resolver resolver( *ioc );
-        boost::asio::ip::tcp::endpoint endpoint;
+        boost::asio::ip::tcp::resolver                                resolver( *ioc );
+        std::shared_ptr<boost::asio::ip::tcp::resolver::results_type> endpoints;
         try
         {
             m_logger->info( "Resolving Address" );
-            boost::asio::ip::tcp::resolver::results_type results = resolver.resolve( http_host_, http_port_ );
-            endpoint                                             = *results.begin();
+            endpoints = std::make_shared<boost::asio::ip::tcp::resolver::results_type>(
+                resolver.resolve( http_host_, http_port_ ) );
         }
         catch ( const boost::system::system_error &e )
         {
@@ -97,48 +139,68 @@ namespace sgns
         }
 
         //Connect socket
-        socket->lowest_layer().async_connect(
-            endpoint,
-            [self = shared_from_this(), ioc, socket, handle_read]( const boost::system::error_code &connect_error )
+        auto connect_deadline = ArmDeadline( ioc, socket, std::chrono::seconds( 10 ) );
+        boost::asio::async_connect(
+            socket->lowest_layer(),
+            *endpoints,
+            [self = shared_from_this(), ioc, ssl_context, socket, endpoints, handle_read, connect_deadline](
+                const boost::system::error_code &connect_error,
+                const boost::asio::ip::tcp::endpoint & )
             {
+                CancelDeadline( connect_deadline );
                 if ( !connect_error )
                 {
+                    auto handshake_deadline = ArmDeadline( ioc, socket, std::chrono::seconds( 10 ) );
                     socket->async_handshake(
                         boost::asio::ssl::stream_base::client,
-                        [self, ioc, socket, handle_read]( const boost::system::error_code &handshake_error )
+                        [self, ioc, ssl_context, socket, handle_read, handshake_deadline](
+                            const boost::system::error_code &handshake_error )
                         {
+                            CancelDeadline( handshake_deadline );
                             if ( !handshake_error )
                             {
                                 // Start the asynchronous download for a specific path
-                                self->StartHTTPGet( ioc, socket, handle_read );
+                                self->StartHTTPGet( ioc, ssl_context, socket, handle_read );
                             }
                             else
                             {
                                 self->m_logger->error( "Handshake error: {}", handshake_error.message() );
-                                handle_read( ioc, outcome::failure( Error::HANDSHAKE_ERROR ), false, false );
+                                handle_read(
+                                    ioc,
+                                    outcome::failure( handshake_deadline.expired->load() ? Error::TIMEOUT
+                                                                                         : Error::HANDSHAKE_ERROR ),
+                                    false,
+                                    false );
                             }
                         } );
                 }
                 else
                 {
                     self->m_logger->error( "Connection error: {}", connect_error.message() );
-                    handle_read( ioc, outcome::failure( Error::CONNECT_ERROR ), false, false );
+                    handle_read(
+                        ioc,
+                        outcome::failure( connect_deadline.expired->load() ? Error::TIMEOUT : Error::CONNECT_ERROR ),
+                        false,
+                        false );
                 }
             } );
     }
 
     void HTTPDevice::StartHTTPGet( std::shared_ptr<boost::asio::io_context>                                ioc,
+                                   std::shared_ptr<boost::asio::ssl::context>                              ssl_context,
                                    std::shared_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> socket,
                                    CompletionCallback                                                      handle_read )
     {
         //Create HTTP Get request and write to server
-        std::string get_request = "GET " + http_path_ + " HTTP/1.1\r\nHost: " + http_host_ +
-                                  "\r\nUser-Agent: GeniusAI/1.0 (SGNS AsyncIO Manager)\r\nConnection: close\r\n\r\n";
+        std::string get_request   = "GET " + http_path_ + " HTTP/1.1\r\nHost: " + http_host_ +
+                                    "\r\nUser-Agent: GeniusAI/1.0 (SGNS AsyncIO Manager)\r\nConnection: close\r\n\r\n";
+        auto        read_deadline = ArmDeadline( ioc, socket, std::chrono::seconds( 30 ) );
         boost::asio::async_write(
             *socket,
             boost::asio::buffer( get_request ),
-            [self = shared_from_this(), ioc, handle_read, socket]( const boost::system::error_code &write_error,
-                                                                   std::size_t )
+            [self = shared_from_this(), ioc, ssl_context, handle_read, socket, read_deadline](
+                const boost::system::error_code &write_error,
+                std::size_t )
             {
                 if ( !write_error )
                 {
@@ -148,15 +210,21 @@ namespace sgns
                         *socket,
                         *headerbuff,
                         boost::asio::transfer_all(),
-                        [self, ioc, handle_read, headerbuff, socket]( const boost::system::error_code &read_error,
-                                                                      std::size_t bytes_transferred )
+                        [self, ioc, ssl_context, handle_read, headerbuff, socket, read_deadline](
+                            const boost::system::error_code &read_error,
+                            std::size_t                      bytes_transferred )
                         {
+                            CancelDeadline( read_deadline );
                             // Check if read completed normally with EOF (boost::asio::error::eof)
                             if ( read_error && read_error != boost::asio::error::eof )
                             {
                                 // Connection was interrupted before completion
                                 self->m_logger->error( "Error, connection interrupted" );
-                                handle_read( ioc, outcome::failure( Error::CON_INTERRUPT ), false, false );
+                                handle_read( ioc,
+                                             outcome::failure( read_deadline.expired->load() ? Error::TIMEOUT
+                                                                                             : Error::CON_INTERRUPT ),
+                                             false,
+                                             false );
                                 return;
                             }
                             //Make a vector buffer from data
@@ -190,8 +258,12 @@ namespace sgns
                 }
                 else
                 {
+                    CancelDeadline( read_deadline );
                     self->m_logger->error( "Error in async_write: {}", write_error.message() );
-                    handle_read( ioc, outcome::failure( Error::REQ_FAILED ), false, false );
+                    handle_read( ioc,
+                                 outcome::failure( read_deadline.expired->load() ? Error::TIMEOUT : Error::REQ_FAILED ),
+                                 false,
+                                 false );
                 }
             } );
     }

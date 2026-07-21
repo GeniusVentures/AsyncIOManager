@@ -42,6 +42,7 @@ namespace sgns
             CON_INTERRUPT     = 4,
             NO_HEADER         = 5,
             REQ_FAILED        = 6,
+            TIMEOUT           = 7,
         };
         using ResultType =
             outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>>;
@@ -80,8 +81,15 @@ namespace sgns
 
         /// @brief Globally disable SSL peer verification (for testing with self-signed certs).
         /// Default is true. Set to false before any HTTPDevice use.
-        static void SetVerifyPeer( bool verify ) { s_verify_peer = verify; }
-        static bool GetVerifyPeer() { return s_verify_peer; }
+        static void SetVerifyPeer( bool verify )
+        {
+            s_verify_peer = verify;
+        }
+
+        static bool GetVerifyPeer()
+        {
+            return s_verify_peer;
+        }
 
     private:
         /**
@@ -92,6 +100,7 @@ namespace sgns
 		 * @param status - Status function that will be updated with status codes as operation progresses
 		 */
         void StartHTTPGet( std::shared_ptr<boost::asio::io_context>                                ioc,
+                           std::shared_ptr<boost::asio::ssl::context>                              ssl_context,
                            std::shared_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> socket,
                            CompletionCallback                                                      handle_read );
 
