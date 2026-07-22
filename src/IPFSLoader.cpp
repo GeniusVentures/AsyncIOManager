@@ -123,7 +123,8 @@ namespace sgns
         }
 
         // Check if we have an external bitswap instance
-        if ( hasExternalBitswap() )
+        auto bitswap = std::atomic_load( &externalBitswap_ );
+        if ( bitswap )
         {
             m_logger->info( "Using external bitswap instance for IPFS request" );
 
@@ -140,7 +141,7 @@ namespace sgns
             auto cid = maybe_cid.value();
 
             // Create IPFSDevice with external bitswap
-            auto ipfsDeviceResult = IPFSDevice::createWithBitswap( ioc, externalBitswap_ );
+            auto ipfsDeviceResult = IPFSDevice::createWithBitswap( ioc, std::move( bitswap ) );
             if ( !ipfsDeviceResult )
             {
                 m_logger->error( "Failed to create IPFSDevice with external bitswap: {}",
@@ -206,13 +207,20 @@ namespace sgns
 
     void IPFSLoader::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
     {
-        externalBitswap_ = bitswap;
+        std::atomic_store( &externalBitswap_, std::move( bitswap ) );
         m_logger->info( "External bitswap instance set for IPFS loader" );
+    }
+
+    bool IPFSLoader::clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap )
+    {
+        auto expected = bitswap;
+        return std::atomic_compare_exchange_strong(
+            &externalBitswap_, &expected, std::shared_ptr<sgns::ipfs_bitswap::Bitswap>{} );
     }
 
     bool IPFSLoader::hasExternalBitswap() const
     {
-        return externalBitswap_ != nullptr;
+        return std::atomic_load( &externalBitswap_ ) != nullptr;
     }
 
 } // End namespace sgns

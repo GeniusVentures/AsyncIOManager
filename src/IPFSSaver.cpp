@@ -29,13 +29,20 @@ namespace sgns
 
     void IPFSSaver::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
     {
-        externalBitswap_ = bitswap;
+        std::atomic_store( &externalBitswap_, std::move( bitswap ) );
         m_logger->info( "External bitswap instance set for IPFS saver" );
+    }
+
+    bool IPFSSaver::clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap )
+    {
+        auto expected = bitswap;
+        return std::atomic_compare_exchange_strong(
+            &externalBitswap_, &expected, std::shared_ptr<sgns::ipfs_bitswap::Bitswap>{} );
     }
 
     bool IPFSSaver::hasExternalBitswap() const
     {
-        return externalBitswap_ != nullptr;
+        return std::atomic_load( &externalBitswap_ ) != nullptr;
     }
 
     void IPFSSaver::SaveFile( std::string filename, std::shared_ptr<void> data )
@@ -61,7 +68,8 @@ namespace sgns
             return;
         }
 
-        if ( !externalBitswap_ )
+        auto bitswap = std::atomic_load( &externalBitswap_ );
+        if ( !bitswap )
         {
             m_logger->error( "No bitswap instance set - cannot publish to IPFS. Call setBitswap() first." );
             boost::asio::post( *ioc, [handle_write, ioc]() { handle_write( ioc ); } );
@@ -104,10 +112,11 @@ namespace sgns
 
                 m_logger->info( "Publishing single file: {} (size: {} bytes)", filePaths[0], fileContents[0].size() );
 
-                externalBitswap_->PublishFile(
+                bitswap->PublishFile(
                     tempFilePath,
-                    [=]( libp2p::outcome::result<sgns::ipfs_bitswap::CID> result )
+                    [=, keep_alive = bitswap]( libp2p::outcome::result<sgns::ipfs_bitswap::CID> result )
                     {
+                        (void) keep_alive;
                         // Clean up temporary file
                         std::filesystem::remove( tempFilePath );
 
@@ -187,10 +196,11 @@ namespace sgns
                 m_logger->info( "Publishing directory with {} files", filePaths.size() );
 
                 // Publish the temp directory directly (contains the root structure)
-                externalBitswap_->PublishDirectory(
+                bitswap->PublishDirectory(
                     tempDirPath,
-                    [=]( libp2p::outcome::result<sgns::ipfs_bitswap::CID> result )
+                    [=, keep_alive = bitswap]( libp2p::outcome::result<sgns::ipfs_bitswap::CID> result )
                     {
+                        (void) keep_alive;
                         // Clean up temporary directory
                         std::filesystem::remove_all( tempDirPath );
 
