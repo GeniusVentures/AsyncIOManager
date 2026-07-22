@@ -243,11 +243,8 @@ std::shared_ptr<int> FileManager::GetOutstandingOperationsPointer()
 
 void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
 {
-    // Store cache dir for local persistence
-    if ( bitswap )
-    {
-        cacheDir_ = bitswap->getCacheDir();
-    }
+    std::lock_guard<std::mutex> lock( bitswapMutex_ );
+    cacheDir_ = bitswap ? bitswap->getCacheDir() : "";
 
     // Forward bitswap instance to IPFSLoader
     auto ipfsLoaderIter = loaders.find( "ipfs" );
@@ -290,7 +287,40 @@ void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitsw
     }
 }
 
+void FileManager::clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap )
+{
+    if ( !bitswap )
+    {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock( bitswapMutex_ );
+    bool cleared = false;
+
+    if ( auto loaderIter = loaders.find( "ipfs" ); loaderIter != loaders.end() )
+    {
+        if ( auto loader = dynamic_cast<sgns::IPFSLoader *>( loaderIter->second ) )
+        {
+            cleared |= loader->clearBitswap( bitswap );
+        }
+    }
+
+    if ( auto saverIter = savers.find( "ipfs" ); saverIter != savers.end() )
+    {
+        if ( auto saver = dynamic_cast<sgns::IPFSSaver *>( saverIter->second ) )
+        {
+            cleared |= saver->clearBitswap( bitswap );
+        }
+    }
+
+    if ( cleared )
+    {
+        cacheDir_.clear();
+    }
+}
+
 std::string FileManager::getCacheDir() const
 {
+    std::lock_guard<std::mutex> lock( bitswapMutex_ );
     return cacheDir_;
 }

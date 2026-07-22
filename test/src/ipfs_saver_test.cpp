@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 #include "FileManager.hpp"
+#include "IPFSLoader.hpp"
+#include "IPFSSaver.hpp"
 #include "testutil/asio_helpers.hpp"
 #include "testutil/bitswap_node.hpp"
 #include "testutil/test_fixture.hpp"
@@ -35,6 +37,10 @@ protected:
 
     static void TearDownTestSuite()
     {
+        if ( s_node )
+        {
+            FileManager::GetInstance().clearBitswap( s_node->getBitswap() );
+        }
         s_node.reset();
     }
 
@@ -43,11 +49,33 @@ protected:
         FileManagerTestFixture::SetUp();
     }
 
+    static std::shared_ptr<ipfs_bitswap::Bitswap> bitswap()
+    {
+        return s_node->getBitswap();
+    }
+
 private:
     static std::unique_ptr<BitswapNode> s_node;
 };
 
 std::unique_ptr<BitswapNode> IPFSSaverEdgeTest::s_node;
+
+TEST_F( IPFSSaverEdgeTest, ClearBitswapOnlyClearsMatchingOwner )
+{
+    BitswapNode newer_node;
+    auto        newer_bitswap = newer_node.getBitswap();
+
+    FileManager::GetInstance().setBitswap( newer_bitswap );
+    FileManager::GetInstance().clearBitswap( bitswap() );
+    EXPECT_TRUE( IPFSLoader::GetInstance()->hasExternalBitswap() );
+    EXPECT_TRUE( IPFSSaver::GetInstance()->hasExternalBitswap() );
+
+    FileManager::GetInstance().clearBitswap( newer_bitswap );
+    EXPECT_FALSE( IPFSLoader::GetInstance()->hasExternalBitswap() );
+    EXPECT_FALSE( IPFSSaver::GetInstance()->hasExternalBitswap() );
+
+    FileManager::GetInstance().setBitswap( bitswap() );
+}
 
 // ---------------------------------------------------------------------------
 // Null / empty data

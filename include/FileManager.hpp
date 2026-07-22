@@ -7,6 +7,7 @@
 #include <cassert>
 #include <future>
 #include <memory>
+#include <mutex>
 #include "ASIOSingleton.hpp"
 #include "FileLoader.hpp"
 #include "FileParser.hpp"
@@ -46,7 +47,8 @@ private:
 
     int outstandingOperations_ = 0;
 
-    std::string cacheDir_; ///< Disk cache directory from bitswap (for local persistence).
+    mutable std::mutex bitswapMutex_;
+    std::string        cacheDir_; ///< Disk cache directory from bitswap (for local persistence).
 
 public:
     static void InitializeSingletons();
@@ -138,6 +140,9 @@ public:
     /// @brief Set bitswap instance for IPFS operations
     /// @param bitswap Shared pointer to existing bitswap instance to reuse
     void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+
+    /// @brief Clear the external Bitswap only if it is still the supplied node's instance.
+    void clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap );
 
     /// @brief Get the disk cache directory used by bitswap (empty if not configured)
     /// @return Cache directory path, or empty string

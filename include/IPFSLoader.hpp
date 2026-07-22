@@ -74,6 +74,9 @@ namespace sgns
         /// @param bitswap Shared pointer to existing bitswap instance
         void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
 
+        /// @brief Clear the external Bitswap only when it still belongs to the specified owner.
+        bool clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap );
+
         /// @brief Check if external bitswap is available
         /// @return True if external bitswap has been set
         bool hasExternalBitswap() const;
