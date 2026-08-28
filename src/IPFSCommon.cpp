@@ -44,13 +44,14 @@ namespace sgns
     }
 
     outcome::result<std::shared_ptr<IPFSDevice>> IPFSDevice::createWithBitswap(
-        std::shared_ptr<boost::asio::io_context>     ioc,
-        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
+        std::shared_ptr<boost::asio::io_context>          ioc,
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap>      bitswap,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht )
     {
         try
         {
             // Create a new IPFSDevice instance (not singleton) with external bitswap
-            auto device = std::shared_ptr<IPFSDevice>( new IPFSDevice( ioc, bitswap ) );
+            auto device = std::shared_ptr<IPFSDevice>( new IPFSDevice( ioc, bitswap, dht ) );
             return device;
         }
         catch ( const std::exception &e )
@@ -82,19 +83,20 @@ namespace sgns
         dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>( kademlia, bootstrapAddresses_, ioc );
     }
 
-    IPFSDevice::IPFSDevice( std::shared_ptr<boost::asio::io_context>     ioc,
-                            std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap ) :
-        dhtretry_( *ioc ), bitswap_( bitswap )
+    IPFSDevice::IPFSDevice( std::shared_ptr<boost::asio::io_context>          ioc,
+                            std::shared_ptr<sgns::ipfs_bitswap::Bitswap>      bitswap,
+                            std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht ) :
+        dhtretry_( *ioc ), bitswap_( bitswap ), dht_( dht )
     {
         // Use external bitswap and its host
         // Extract host from bitswap (assuming bitswap has a way to get its host)
         // For now, we'll set host_ to nullptr and rely on bitswap for operations
         host_ = nullptr;
 
-        // No DHT creation since we're using external bitswap
-        dht_ = nullptr;
-
-        m_logger->info( "IPFSDevice created with external bitswap instance" );
+        // Use the provided external DHT (may be null) - no DHT creation since
+        // we're using the external bitswap
+        m_logger->info( "IPFSDevice created with external bitswap instance{}",
+                        dht_ ? " and external DHT" : "" );
     }
 
     bool IPFSDevice::StartFindingPeers( std::shared_ptr<boost::asio::io_context> ioc,
@@ -105,6 +107,13 @@ namespace sgns
                                         bool                                     save,
                                         CompletionCallback                       handle_read )
     {
+        if ( !dht_ )
+        {
+            // No DHT available - fall back to a direct bitswap request
+            m_logger->warn( "No DHT available, skipping peer discovery for CID" );
+            return RequestBlockMain( ioc, cid, filename, addressoffset, parse, save, handle_read );
+        }
+
         auto peer_id = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
         dht_->FindProviders(
             cid,
@@ -327,6 +336,11 @@ namespace sgns
     std::shared_ptr<sgns::ipfs_bitswap::Bitswap> IPFSDevice::getBitswap() const
     {
         return bitswap_;
+    }
+
+    std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> IPFSDevice::getDHT() const
+    {
+        return dht_;
     }
 
     std::shared_ptr<libp2p::Host> IPFSDevice::getHost() const

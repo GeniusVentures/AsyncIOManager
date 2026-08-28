@@ -8,6 +8,7 @@
 #include "FileManager.hpp"
 #include "IPFSSaver.hpp"
 #include "URLStringUtil.h"
+#include "ipfs_lite/dht/kademlia_dht.hpp"
 #include "libp2p/multi/content_identifier_codec.hpp"
 
 namespace sgns
@@ -27,22 +28,56 @@ namespace sgns
         FileManager::GetInstance().RegisterSaver( "ipfs", this );
     }
 
-    void IPFSSaver::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
+    void IPFSSaver::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap>          bitswap,
+                                std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht )
     {
         std::atomic_store( &externalBitswap_, std::move( bitswap ) );
+        std::atomic_store( &externalDht_, std::move( dht ) );
         m_logger->info( "External bitswap instance set for IPFS saver" );
     }
 
     bool IPFSSaver::clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap )
     {
         auto expected = bitswap;
-        return std::atomic_compare_exchange_strong(
-            &externalBitswap_, &expected, std::shared_ptr<sgns::ipfs_bitswap::Bitswap>{} );
+        if ( std::atomic_compare_exchange_strong(
+                 &externalBitswap_, &expected, std::shared_ptr<sgns::ipfs_bitswap::Bitswap>{} ) )
+        {
+            // Clear the associated DHT as well so a stale DHT is never left behind
+            std::atomic_store( &externalDht_, std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT>{} );
+            return true;
+        }
+        return false;
     }
 
     bool IPFSSaver::hasExternalBitswap() const
     {
         return std::atomic_load( &externalBitswap_ ) != nullptr;
+    }
+
+    bool IPFSSaver::hasExternalDHT() const
+    {
+        return std::atomic_load( &externalDht_ ) != nullptr;
+    }
+
+    void IPFSSaver::AnnounceCID( const std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> &dht,
+                                 const sgns::ipfs_bitswap::CID                              &cid )
+    {
+        auto encoded = libp2p::multi::ContentIdentifierCodec::encode( cid );
+        if ( !encoded )
+        {
+            m_logger->error( "Failed to encode CID for DHT announce: {}", encoded.error().message() );
+            return;
+        }
+
+        auto provideResult = dht->ProvideCID( libp2p::protocol::kademlia::ContentId( encoded.value() ), true );
+        if ( !provideResult )
+        {
+            m_logger->error( "Failed to announce CID via DHT: {}", provideResult.error().message() );
+        }
+        else
+        {
+            m_logger->info( "Announced published CID via DHT" );
+        }
     }
 
     void IPFSSaver::SaveFile( std::string filename, std::shared_ptr<void> data )
@@ -75,6 +110,9 @@ namespace sgns
             boost::asio::post( *ioc, [handle_write, ioc]() { handle_write( ioc ); } );
             return;
         }
+
+        // Optional external DHT used to announce published CIDs
+        auto dht = std::atomic_load( &externalDht_ );
 
         auto &filePaths    = data.value()->first;
         auto &fileContents = data.value()->second;
@@ -122,6 +160,11 @@ namespace sgns
 
                         if ( result.has_value() )
                         {
+                            // Announce the CID in the DHT when one is available
+                            if ( dht )
+                            {
+                                AnnounceCID( dht, result.value() );
+                            }
                             auto cidString = libp2p::multi::ContentIdentifierCodec::toString( result.value() );
                             if ( cidString.has_value() )
                             {
@@ -206,6 +249,11 @@ namespace sgns
 
                         if ( result.has_value() )
                         {
+                            // Announce the root CID in the DHT when one is available
+                            if ( dht )
+                            {
+                                AnnounceCID( dht, result.value() );
+                            }
                             auto cidString = libp2p::multi::ContentIdentifierCodec::toString( result.value() );
                             if ( cidString.has_value() )
                             {

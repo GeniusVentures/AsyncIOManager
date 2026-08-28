@@ -241,7 +241,8 @@ std::shared_ptr<int> FileManager::GetOutstandingOperationsPointer()
     return std::make_shared<int>( outstandingOperations_ );
 }
 
-void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
+void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap>      bitswap,
+                              std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht )
 {
     std::lock_guard<std::mutex> lock( bitswapMutex_ );
     cacheDir_ = bitswap ? bitswap->getCacheDir() : "";
@@ -253,8 +254,8 @@ void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitsw
         auto ipfsLoader = dynamic_cast<sgns::IPFSLoader *>( ipfsLoaderIter->second );
         if ( ipfsLoader )
         {
-            ipfsLoader->setBitswap( bitswap );
-            m_logger->info( "Bitswap instance set for IPFS loader" );
+            ipfsLoader->setBitswap( bitswap, dht );
+            m_logger->info( "Bitswap instance set for IPFS loader{}", dht ? " with DHT" : "" );
         }
         else
         {
@@ -273,8 +274,8 @@ void FileManager::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitsw
         auto ipfsSaver = dynamic_cast<sgns::IPFSSaver *>( ipfsSaverIter->second );
         if ( ipfsSaver )
         {
-            ipfsSaver->setBitswap( bitswap );
-            m_logger->info( "Bitswap instance set for IPFS saver" );
+            ipfsSaver->setBitswap( bitswap, dht );
+            m_logger->info( "Bitswap instance set for IPFS saver{}", dht ? " with DHT" : "" );
         }
         else
         {
