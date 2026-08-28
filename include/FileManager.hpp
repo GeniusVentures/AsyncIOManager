@@ -23,6 +23,12 @@ namespace sgns::ipfs_bitswap
     class Bitswap;
 }
 
+// Forward declaration for DHT
+namespace sgns::ipfs_lite::ipfs::dht
+{
+    class IpfsDHT;
+}
+
 namespace outcome
 {
     using libp2p::outcome::failure;
@@ -139,7 +145,9 @@ public:
 
     /// @brief Set bitswap instance for IPFS operations
     /// @param bitswap Shared pointer to existing bitswap instance to reuse
-    void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+    /// @param dht Optional DHT instance used to announce/discover CIDs (defaults to none)
+    void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap>      bitswap,
+                     std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht = nullptr );
 
     /// @brief Clear the external Bitswap only if it is still the supplied node's instance.
     void clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap );

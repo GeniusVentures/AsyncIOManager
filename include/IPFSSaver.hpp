@@ -6,6 +6,12 @@
 #include "ASIOSingleton.hpp"
 #include "bitswap.hpp"
 
+// Forward declaration for DHT
+namespace sgns::ipfs_lite::ipfs::dht
+{
+    class IpfsDHT;
+}
+
 namespace sgns
 {
     /// @brief class to handle "ipfs://" prefix in a filename to save to ipfs
@@ -28,7 +34,9 @@ namespace sgns
 
         /// @brief Set external bitswap instance for publishing content
         /// @param bitswap Shared pointer to bitswap instance
-        void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+        /// @param dht Optional external DHT instance used to announce published CIDs
+        void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap>          bitswap,
+                         std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht = nullptr );
 
         /// @brief Clear the external Bitswap only when it still belongs to the specified owner.
         bool clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap );
@@ -37,8 +45,17 @@ namespace sgns
         /// @return true if external bitswap is set
         bool hasExternalBitswap() const;
 
+        /// @brief Check if external DHT is available
+        /// @return true if external DHT is set
+        bool hasExternalDHT() const;
+
     private:
-        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> externalBitswap_;
-        sgns::asiomgr::Logger                        m_logger = sgns::asiomgr::createLogger( "IPFSSaver" );
+        /// @brief Announce a published CID in the DHT (when an external DHT is set)
+        void AnnounceCID( const std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> &dht,
+                          const sgns::ipfs_bitswap::CID                              &cid );
+
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap>          externalBitswap_;
+        std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> externalDht_;
+        sgns::asiomgr::Logger                                 m_logger = sgns::asiomgr::createLogger( "IPFSSaver" );
     };
 }

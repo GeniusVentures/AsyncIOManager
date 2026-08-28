@@ -140,8 +140,9 @@ namespace sgns
             }
             auto cid = maybe_cid.value();
 
-            // Create IPFSDevice with external bitswap
-            auto ipfsDeviceResult = IPFSDevice::createWithBitswap( ioc, std::move( bitswap ) );
+            // Create IPFSDevice with external bitswap (and optional external DHT)
+            auto dht                 = std::atomic_load( &externalDht_ );
+            auto ipfsDeviceResult    = IPFSDevice::createWithBitswap( ioc, std::move( bitswap ), dht );
             if ( !ipfsDeviceResult )
             {
                 m_logger->error( "Failed to create IPFSDevice with external bitswap: {}",
@@ -153,8 +154,18 @@ namespace sgns
             }
             auto ipfsDevice = ipfsDeviceResult.value();
 
-            // Use the device to request the block
-            ioc->post( [=] { ipfsDevice->RequestBlockMain( ioc, cid, ipfs_file, 0, parse, save, handle_read ); } );
+            if ( ipfsDevice->getDHT() )
+            {
+                // DHT available - discover providers for this CID before requesting the block
+                m_logger->info( "External DHT available, finding providers for CID" );
+                ioc->post(
+                    [=] { ipfsDevice->StartFindingPeers( ioc, cid, ipfs_file, 0, parse, save, handle_read ); } );
+            }
+            else
+            {
+                // Use the device to request the block
+                ioc->post( [=] { ipfsDevice->RequestBlockMain( ioc, cid, ipfs_file, 0, parse, save, handle_read ); } );
+            }
 
             return result;
         }
@@ -190,37 +201,50 @@ namespace sgns
         auto cid = maybe_cid.value();
 
         // Add addresses for this specific CID
-        ipfsDevice->addAddress(
-            cid,
-            libp2p::multi::Multiaddress::create(
-                "/ip4/192.168.46.124/tcp/4001/p2p/12D3KooWHsD2QEUS5FzHEyq2bTuwMSEuEvV86wVAc7VaDDKK1NwJ" )
-                .value() );
+        // ipfsDevice->addAddress(
+        //     cid,
+        //     libp2p::multi::Multiaddress::create(
+        //         "/ip4/192.168.46.124/tcp/4001/p2p/12D3KooWHsD2QEUS5FzHEyq2bTuwMSEuEvV86wVAc7VaDDKK1NwJ" )
+        //         .value() );
         ioc->post(
             [=]
             {
-                ipfsDevice->RequestBlockMain( ioc, cid, ipfs_file, 0, parse, save, handle_read );
-                //ipfsDevice->StartFindingPeers(ioc, cid, ipfs_file, 0, parse, save, handle_read, status);
+                //ipfsDevice->RequestBlockMain( ioc, cid, ipfs_file, 0, parse, save, handle_read );
+                ipfsDevice->StartFindingPeers(ioc, cid, ipfs_file, 0, parse, save, handle_read);
             } );
 
         return result;
     }
 
-    void IPFSLoader::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
+    void IPFSLoader::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap>          bitswap,
+                                 std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht )
     {
         std::atomic_store( &externalBitswap_, std::move( bitswap ) );
+        std::atomic_store( &externalDht_, std::move( dht ) );
         m_logger->info( "External bitswap instance set for IPFS loader" );
     }
 
     bool IPFSLoader::clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap )
     {
         auto expected = bitswap;
-        return std::atomic_compare_exchange_strong(
-            &externalBitswap_, &expected, std::shared_ptr<sgns::ipfs_bitswap::Bitswap>{} );
+        if ( std::atomic_compare_exchange_strong(
+                 &externalBitswap_, &expected, std::shared_ptr<sgns::ipfs_bitswap::Bitswap>{} ) )
+        {
+            // Clear the associated DHT as well so a stale DHT is never left behind
+            std::atomic_store( &externalDht_, std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT>{} );
+            return true;
+        }
+        return false;
     }
 
     bool IPFSLoader::hasExternalBitswap() const
     {
         return std::atomic_load( &externalBitswap_ ) != nullptr;
+    }
+
+    bool IPFSLoader::hasExternalDHT() const
+    {
+        return std::atomic_load( &externalDht_ ) != nullptr;
     }
 
 } // End namespace sgns
