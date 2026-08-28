@@ -18,6 +18,12 @@ namespace sgns::ipfs_bitswap
     class Bitswap;
 }
 
+// Forward declaration for DHT
+namespace sgns::ipfs_lite::ipfs::dht
+{
+    class IpfsDHT;
+}
+
 namespace sgns
 {
 
@@ -72,7 +78,9 @@ namespace sgns
 
         /// @brief Set external bitswap instance to reuse existing libp2p host
         /// @param bitswap Shared pointer to existing bitswap instance
-        void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+        /// @param dht Optional external DHT instance used for provider discovery
+        void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap>          bitswap,
+                         std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht = nullptr );
 
         /// @brief Clear the external Bitswap only when it still belongs to the specified owner.
         bool clearBitswap( const std::shared_ptr<sgns::ipfs_bitswap::Bitswap> &bitswap );
@@ -81,11 +89,18 @@ namespace sgns
         /// @return True if external bitswap has been set
         bool hasExternalBitswap() const;
 
+        /// @brief Check if external DHT is available
+        /// @return True if external DHT has been set
+        bool hasExternalDHT() const;
+
     private:
         sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger( "IPFSLoader" );
 
         /// @brief External bitswap instance to reuse existing libp2p host
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> externalBitswap_;
+
+        /// @brief External DHT instance for provider discovery (optional)
+        std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> externalDht_;
 
     protected:
     };

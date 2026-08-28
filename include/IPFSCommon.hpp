@@ -79,18 +79,24 @@ namespace sgns
 		 * Create an IPFS Device instance using external bitswap (no singleton)
 		 * @param ioc - Asio io context to use
 		 * @param bitswap - External bitswap instance to use
-		 */
+         * @param dht - Optional external DHT instance for provider discovery/announcement
+         */
         static outcome::result<std::shared_ptr<IPFSDevice>> createWithBitswap(
-            std::shared_ptr<boost::asio::io_context>     ioc,
-            std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+            std::shared_ptr<boost::asio::io_context>          ioc,
+            std::shared_ptr<sgns::ipfs_bitswap::Bitswap>      bitswap,
+            std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht = nullptr );
         /**
-		 * Get bitswap from device
-		 */
+         * Get bitswap from device
+         */
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> getBitswap() const;
         /**
-		 * Get host from device
-		 */
+        * Get host from device
+        */
         std::shared_ptr<libp2p::Host> getHost() const;
+        /**
+         * Get DHT from device (null when none was provided or created)
+         */
+        std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> getDHT() const;
 
         ~IPFSDevice()
         {
@@ -183,13 +189,14 @@ namespace sgns
 		 * Create an IPFSDevice using external bitswap instance
 		 * @param ioc - Asio io context to use
 		 * @param bitswap - External bitswap instance to use
-		 */
-        IPFSDevice( std::shared_ptr<boost::asio::io_context>     ioc,
-                    std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+         * @param dht - Optional external DHT instance to use
+         */
+        IPFSDevice( std::shared_ptr<boost::asio::io_context>          ioc,
+                    std::shared_ptr<sgns::ipfs_bitswap::Bitswap>      bitswap,
+                    std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht = nullptr );
 
         sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger( "IPFSCommon" );
 
-        //Common vars used for getting file from IPFS
         static std::shared_ptr<IPFSDevice> instance_;
         static std::mutex                  mutex_;
 
