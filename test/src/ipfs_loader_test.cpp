@@ -47,6 +47,35 @@ protected:
             serverInfo.id,
             gsl::span( serverInfo.addresses.data(), serverInfo.addresses.size() ),
             libp2p::peer::ttl::kDay );
+
+        // Start the DHT: only the client bootstraps to the server (the
+        // provider). The server runs as a pure DHT server — provide() records
+        // the CID in its local routing table and it answers the client's
+        // GET_PROVIDERS from there. Bootstrapping both ways makes the nodes
+        // dial each other simultaneously, which stalls every dial for the
+        // full connection timeout.
+        s_serverNode->startDHT();
+        s_clientNode->startDHT( { serverInfo } );
+
+        // Warm up the client->server connection: kademlia's newStream then
+        // reuses it instead of paying a full cold Noise handshake inside the
+        // FindProviders deadline (which can take 10+s in Debug on Windows).
+        {
+            auto streamOpened = std::make_shared<bool>( false );
+            s_clientNode->getHost()->newStream(
+                serverInfo, { "/ipfs/kad/1.0.0" },
+                [streamOpened]( libp2p::StreamAndProtocolOrError stream ) {
+                    if ( stream )
+                    {
+                        // Leaving the stream open keeps the connection reuse;
+                        // resetting it would tear the connection back down.
+                        stream.value().stream->close( []( libp2p::outcome::result<void> ) {} );
+                    }
+                    *streamOpened = true;
+                },
+                std::chrono::milliseconds( 30000 ) );
+            pollUntil( [&]() { return *streamOpened; }, std::chrono::seconds( 35 ) );
+        }
     }
 
     static void TearDownTestSuite()
@@ -138,6 +167,78 @@ TEST_F( IPFSIntegrationTest, Loader_RetrievesPublishedContent )
         std::string retrievedStr( received->value()->second[0].data(),
                                   received->value()->second[0].size() );
         EXPECT_EQ( retrievedStr, "ipfs loader test content" );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// IPFSLoader + DHT: saver provides via DHT, loader discovers the provider
+// automatically over the DHT (setBitswap overload with a DHT)
+// ---------------------------------------------------------------------------
+
+TEST_F( IPFSIntegrationTest, Loader_FindsProviderViaDHT )
+{
+    // Saver side: server node's bitswap with its DHT (the second setBitswap
+    // overload) — the saver announces the published CID via DHT provide.
+    FileManager::GetInstance().setBitswap( serverNode().getBitswap(), serverNode().getDHT() );
+
+    std::string cidStr;
+    {
+        IOContextRunner              runner;
+        bool                         saveDone = false;
+        std::shared_ptr<std::string> saveLoc  = std::make_shared<std::string>();
+
+        auto data = makeSingleFileResult( "dht_published.bin", "ipfs dht test content" );
+
+        FileManager::GetInstance().SaveASync(
+            "ipfs://published", data, runner.ioc(),
+            [&]( FileManager::ResultType ) { saveDone = true; },
+            saveLoc );
+
+        ASSERT_TRUE( pollUntil( [&]() { return saveDone; }, std::chrono::seconds( 60 ) ) )
+            << "Timed out waiting for IPFS publish via FileManager";
+        ASSERT_FALSE( saveLoc->empty() );
+        ASSERT_NE( saveLoc->find( "ipfs://" ), std::string::npos );
+
+        cidStr = saveLoc->substr( 7 ); // strip "ipfs://"
+
+        auto cid = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+        ASSERT_TRUE( cid.has_value() ) << "Failed to decode CID from saveLoc";
+    }
+
+    // Loader side: client node's bitswap with its DHT — provider discovery
+    // happens automatically over the DHT; no AddProvider() call here.
+    FileManager::GetInstance().setBitswap( clientNode().getBitswap(), clientNode().getDHT() );
+
+    {
+        IOContextRunner                         loadRunner;
+        bool                                    loadDone = false;
+        std::optional<FileManager::ResultType>  received;
+
+        std::string loadUrl = "ipfs://" + cidStr + "/dht_published.bin";
+
+        FileManager::GetInstance().LoadASync(
+            loadUrl,
+            false, false, loadRunner.ioc(),
+            [&]( FileManager::ResultType result )
+            {
+                received = std::move( result );
+                loadDone = true;
+            },
+            "" );
+
+        // Generous budget: DHT retries (15s connection timeout + 10s retry
+        // interval) plus a slow Debug-build Noise handshake can take a while.
+        ASSERT_TRUE( pollUntil( [&]() { return loadDone; }, std::chrono::seconds( 120 ) ) )
+            << "Timed out waiting for DHT-based IPFS retrieve via FileManager";
+
+        ASSERT_TRUE( received.has_value() );
+        ASSERT_TRUE( received->has_value() );
+        ASSERT_NE( received->value(), nullptr );
+        ASSERT_FALSE( received->value()->second.empty() );
+
+        std::string retrievedStr( received->value()->second[0].data(),
+                                  received->value()->second[0].size() );
+        EXPECT_EQ( retrievedStr, "ipfs dht test content" );
     }
 }
 
