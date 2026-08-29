@@ -159,21 +159,22 @@ namespace sgns
                                                  bool                                     save,
                                                  CompletionCallback                       handle_read )
     {
-        boost::asio::deadline_timer      dhtretry( *ioc.get() );
         boost::posix_time::time_duration timeout( boost::posix_time::milliseconds( 10000 ) );
         dhtretry_.expires_from_now( timeout );
+        // Capture shared_ptr to keep this object alive during callback
+        auto self = shared_from_this();
         dhtretry_.async_wait(
-            [ioc, cid, filename, addressoffset, parse, save, handle_read, this]( const boost::system::error_code &ec )
+            [ioc, cid, filename, addressoffset, parse, save, handle_read, self]( const boost::system::error_code &ec )
             {
                 if ( !ec )
                 {
                     // Timer expired, call StartFindingPeers again with captured parameters
-                    this->StartFindingPeers( ioc, cid, filename, addressoffset, parse, save, handle_read );
+                    self->StartFindingPeers( ioc, cid, filename, addressoffset, parse, save, handle_read );
                 }
                 else
                 {
                     // Handle error
-                    m_logger->error( "Error: {}", ec.message() );
+                    self->m_logger->error( "Error: {}", ec.message() );
                 }
             } );
     }

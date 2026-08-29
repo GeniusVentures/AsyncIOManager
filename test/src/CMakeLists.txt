@@ -164,4 +164,38 @@ if(ASYNC_IO_MANAGER_NETWORK_TESTS)
         Boost::boost
         ${WIN_CRYPT_LIBRARY}
     )
+
+    addtest(ipfs_device_test
+        ipfs_device_test.cpp
+    )
+    target_link_libraries(ipfs_device_test
+        AsyncIOManager
+        asiomgr_testutil
+        ${Boost_LIBRARIES}
+        ipfs-bitswap-cpp
+        ipfs-bitswap-proto
+        ipfs-unixfs-proto
+        ipfs-lite-cpp::ipld_node
+        Boost::Boost.DI
+        p2p::p2p_default_network
+        p2p::p2p_basic_host
+        p2p::p2p_multiaddress
+        p2p::p2p_kademlia
+        p2p::p2p_identify
+        p2p::p2p_identify_proto
+        p2p::p2p_ping
+        p2p::p2p_default_host
+        spdlog::spdlog
+        soralog::soralog
+        yaml-cpp::yaml-cpp
+        Boost::boost
+        ${WIN_CRYPT_LIBRARY}
+    )
+    # bitswap_node.hpp's Boost.DI TEMPLATE_TO macro trips newer clang's
+    # -Wmissing-template-arg-list-after-template-kw (error by default);
+    # same conformance drift as example/MNNExample.cpp. Match the project's
+    # existing -Wno-* handling for toolchain noise.
+    target_compile_options(ipfs_device_test PRIVATE
+        -Wno-missing-template-arg-list-after-template-kw
+    )
 endif()
