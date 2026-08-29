@@ -115,13 +115,15 @@ namespace sgns
         }
 
         auto peer_id = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
+        // Capture shared_ptr to keep this object alive during callback
+        auto self = shared_from_this();
         dht_->FindProviders(
             cid,
-            [=]( libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
+            [self, ioc, cid, filename, addressoffset, parse, save, handle_read]( libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
             {
                 if ( !res )
                 {
-                    m_logger->error( "Cannot find providers: {}", res.error().message() );
+                    self->m_logger->error( "Cannot find providers: {}", res.error().message() );
                     return false;
                 }
                 auto &providers = res.value();
@@ -136,14 +138,14 @@ namespace sgns
                             addresses.insert( addresses.end(), provider.addresses.begin(), provider.addresses.end() );
                         }
                     }
-                    addAddresses( cid, addresses );
+                    self->addAddresses( cid, addresses );
 
-                    return RequestBlockMain( ioc, cid, filename, 0, parse, save, handle_read );
+                    return self->RequestBlockMain( ioc, cid, filename, 0, parse, save, handle_read );
                 }
                 else
                 {
-                    m_logger->error( "Empty provider list received" );
-                    StartFindingPeersWithRetry( ioc, cid, filename, addressoffset, parse, save, handle_read );
+                    self->m_logger->error( "Empty provider list received" );
+                    self->StartFindingPeersWithRetry( ioc, cid, filename, addressoffset, parse, save, handle_read );
                     return false;
                 }
             } );

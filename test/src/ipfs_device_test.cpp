@@ -1,13 +1,15 @@
 /**
  * @file ipfs_device_test.cpp
- * @brief Regression coverage for the use-after-free in IPFSDevice::StartFindingPeersWithRetry.
+ * @brief Regression coverage for use-after-free lifetime bugs in IPFSDevice async callbacks.
  *
- * The 10s dhtretry_ timer handler previously captured raw `this`. When the last
- * external shared_ptr<IPFSDevice> was dropped while the timer was armed (e.g. the
- * process-global FileManager singleton is setBitswap'd to the next node), the
- * handler ran on freed memory. These tests prove that the armed handler keeps the
- * device alive (weak_ptr does not expire) and that the full retry chain completes
- * on a valid object after the external reference is dropped.
+ * Two lambdas previously captured raw `this` while their async operation could
+ * outlive the last external shared_ptr<IPFSDevice> (e.g. the process-global
+ * FileManager singleton is setBitswap'd to the next node): the 10s dhtretry_
+ * timer handler in StartFindingPeersWithRetry, and the provider-query callback
+ * passed to dht_->FindProviders in StartFindingPeers. These tests prove that
+ * each in-flight operation keeps the device alive (weak_ptr does not expire)
+ * and that the full retry chain completes on a valid object after the external
+ * reference is dropped.
  *
  * Gated behind ASYNC_IO_MANAGER_NETWORK_TESTS=ON (BitswapNode fixture).
  */
@@ -133,4 +135,63 @@ TEST_F( IPFSDeviceRetryTest, RetryChainCompletesAfterReferenceDropped )
 
     // Teardown hygiene: the handler chain must release the device.
     EXPECT_TRUE( pollUntil( [&watch]() { return watch.expired(); }, std::chrono::seconds( 5 ) ) );
+}
+
+// ---------------------------------------------------------------------------
+// FindProvidersCallbackKeepsDeviceAlive — the second use-after-free regression:
+// the provider-query callback previously captured raw `this` ([=]) and runs
+// async once a DHT is attached; it fires ~20s later on a freed device.
+// ---------------------------------------------------------------------------
+
+TEST_F( IPFSDeviceRetryTest, FindProvidersCallbackKeepsDeviceAlive )
+{
+    IOContextRunner runner;
+
+    // Minimal DHT stack mirroring IPFSDevice's singleton constructor: kademlia
+    // via the host injector, IpfsDHT with NO bootstrap addresses (hermetic —
+    // nothing ever leaves the process).
+    libp2p::protocol::kademlia::Config kademlia_config;
+    auto                               injector = libp2p::injector::makeHostInjector(
+        libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
+    auto host     = injector.create<std::shared_ptr<libp2p::Host>>();
+    auto kademlia = injector.create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
+
+    // Seed one unreachable peer into the routing table. With an EMPTY table the
+    // executor finds nothing to dial and completes the query synchronously
+    // (verified against find_providers_executor.cpp: spawn() calls done() when
+    // requests_in_progress_ == 0). One seeded peer makes newStream() dial
+    // asynchronously — the handler stays stored in the executor while the dial
+    // pends, which is the in-flight window the GT crash hit.
+    const auto cid     = libp2p::multi::ContentIdentifierCodec::fromString( kNeverPublishedCid ).value();
+    const auto seedId  = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
+    const libp2p::peer::PeerInfo seedPeer{
+        seedId, { libp2p::multi::Multiaddress::create( "/ip4/127.0.0.1/tcp/4001" ).value() } };
+    kademlia->addPeer( seedPeer, true );
+
+    auto dht = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>( kademlia, std::vector<std::string>{}, runner.ioc() );
+
+    auto device = IPFSDevice::createWithBitswap( runner.ioc(), s_clientNode->getBitswap(), dht ).value();
+
+    auto                      fired = std::make_shared<bool>( false );
+    IPFSDevice::CompletionCallback callback =
+        [fired]( std::shared_ptr<boost::asio::io_context>, IPFSDevice::ResultType, bool, bool )
+        {
+            *fired = true;
+        };
+
+    // Start the provider query, then drop the last EXTERNAL reference while
+    // the FindProviders query is in flight (the UAF window).
+    device->StartFindingPeers( runner.ioc(), cid, "dht_probe.bin", 0, false, false, callback );
+    std::weak_ptr<IPFSDevice> watch = device;
+    device.reset();
+
+    // Verified: with a seeded routing table the dial pends on the (unrun)
+    // libp2p io_context, so the handler stays stored in the executor across
+    // the reset. Pre-fix ([=] captures raw this, nothing owns the device) the
+    // weak_ptr expires immediately; post-fix the stored callback holds self.
+    EXPECT_NE( watch.lock(), nullptr ) << "device was freed while FindProviders query was in flight (use-after-free)";
+
+    // No expiry wait: a pending query legitimately keeps the device alive until
+    // this scope ends and the DHT stack (dht/kademlia/host, declared after
+    // runner) tears down, destroying the stored callback on this thread.
 }
