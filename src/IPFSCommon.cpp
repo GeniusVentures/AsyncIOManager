@@ -117,7 +117,7 @@ namespace sgns
         auto peer_id = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
         // Capture shared_ptr to keep this object alive during callback
         auto self = shared_from_this();
-        dht_->FindProviders(
+        auto findResult = dht_->FindProviders(
             cid,
             [self, ioc, cid, filename, addressoffset, parse, save, handle_read]( libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
             {
@@ -149,6 +149,10 @@ namespace sgns
                     return false;
                 }
             } );
+        if ( !findResult )
+        {
+            m_logger->error( "Failed to start FindProviders: {}", findResult.error().message() );
+        }
         //});
         return false;
     }

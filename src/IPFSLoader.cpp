@@ -261,5 +261,5 @@ namespace sgns
                             libp2p::multi::ContentIdentifierCodec::toString( cid ).value() );
         }
     }
-    
+
 } // End namespace sgns

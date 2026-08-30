@@ -23,15 +23,12 @@ namespace sgns::ipfs_lite::ipfs::dht
 {
     class IpfsDHT;
 }
-<<<<<<< HEAD
-=======
 
 // Forward declaration for DHT
 namespace libp2p
 {
     class PeerInfo;
 }
->>>>>>> 0d0d3ff
 
 namespace sgns
 {
