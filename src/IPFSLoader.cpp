@@ -247,4 +247,19 @@ namespace sgns
         return std::atomic_load( &externalDht_ ) != nullptr;
     }
 
+    void IPFSLoader::addSeedProvider( const CID &cid, const libp2p::peer::PeerInfo &peerInfo )
+    {
+        // Check if we have an external bitswap instance
+        auto bitswap = std::atomic_load( &externalBitswap_ );
+        if ( bitswap )
+        {
+            bitswap->AddProvider( cid, peerInfo );
+        }
+        else
+        {
+            m_logger->info( "no bitswap instance to set provider for {}",
+                            libp2p::multi::ContentIdentifierCodec::toString( cid ).value() );
+        }
+    }
+    
 } // End namespace sgns
