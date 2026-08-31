@@ -225,7 +225,18 @@ groups:
         {
             io_thread_.join();
         }
-        // bitswap_ and event_bus_ are destroyed naturally after IO drains
+        // Explicit, dependency-safe teardown order (member-declaration order
+        // alone destroys io_context_ before its users): DHT (its timer and
+        // kademlia refs) -> bitswap -> kademlia -> host -> scheduler -> bus,
+        // io_context_ last.
+        dht_.reset();
+        bitswap_.reset();
+        kademlia_.reset();
+        kademliaConfig_.reset();
+        host_.reset();
+        scheduler_.reset();
+        event_bus_.reset();
+        io_context_.reset();
     }
 
     BitswapNode( const BitswapNode & )            = delete;

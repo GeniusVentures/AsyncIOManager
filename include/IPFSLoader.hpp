@@ -27,7 +27,7 @@ namespace sgns::ipfs_lite::ipfs::dht
 // Forward declaration for PeerInfo (seed provider registration)
 namespace libp2p::peer
 {
-    class PeerInfo;
+    struct PeerInfo;
 }
 
 namespace sgns
