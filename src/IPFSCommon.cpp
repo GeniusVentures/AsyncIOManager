@@ -116,19 +116,21 @@ namespace sgns
 
         auto peer_id = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
         (void) peer_id;
-        // Keep this device alive for the duration of the asynchronous DHT
+        // Capture shared_ptr to keep this object alive during the async DHT
         // lookup — the caller's shared_ptr may be released as soon as the
         // posting lambda finishes, and the callback below would otherwise
         // capture a dangling raw `this` (RequestBlockMain does the same).
         auto self       = shared_from_this();
         auto findResult = dht_->FindProviders(
             cid,
-            [self, this, ioc, cid, filename, addressoffset, parse, save, handle_read](
+            [self, ioc, cid, filename, addressoffset, parse, save, handle_read](
                 libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
             {
                 if ( !res )
                 {
-                    m_logger->error( "Cannot find providers: {}", res.error().message() );
+                    self->m_logger->error( "Cannot find providers: {}", res.error().message() );
+                    // Always deliver a completion to the caller — swallowing
+                    // the error here makes every caller hang on its ioc wait.
                     boost::asio::post( *ioc,
                                        [handle_read, ioc]() {
                                            handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false, false );
@@ -147,20 +149,22 @@ namespace sgns
                             addresses.insert( addresses.end(), provider.addresses.begin(), provider.addresses.end() );
                         }
                     }
-                    addAddresses( cid, addresses );
+                    self->addAddresses( cid, addresses );
 
-                    return RequestBlockMain( ioc, cid, filename, 0, parse, save, handle_read );
+                    return self->RequestBlockMain( ioc, cid, filename, 0, parse, save, handle_read );
                 }
                 else
                 {
-                    m_logger->error( "Empty provider list received" );
-                    StartFindingPeersWithRetry( ioc, cid, filename, addressoffset, parse, save, handle_read );
+                    self->m_logger->error( "Empty provider list received" );
+                    self->StartFindingPeersWithRetry( ioc, cid, filename, addressoffset, parse, save, handle_read );
                     return false;
                 }
             } );
         if ( !findResult )
         {
-            m_logger->error( "Failed to start provider search: {}", findResult.error().message() );
+            self->m_logger->error( "Failed to start provider search: {}", findResult.error().message() );
+            // Sync failure to even start the search must also deliver a
+            // completion, otherwise callers wait forever on handle_read.
             boost::asio::post( *ioc,
                                [handle_read, ioc]() {
                                    handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false, false );
@@ -178,21 +182,22 @@ namespace sgns
                                                  bool                                     save,
                                                  CompletionCallback                       handle_read )
     {
-        boost::asio::deadline_timer      dhtretry( *ioc.get() );
         boost::posix_time::time_duration timeout( boost::posix_time::milliseconds( 10000 ) );
         dhtretry_.expires_from_now( timeout );
+        // Capture shared_ptr to keep this object alive during callback
+        auto self = shared_from_this();
         dhtretry_.async_wait(
-            [ioc, cid, filename, addressoffset, parse, save, handle_read, this]( const boost::system::error_code &ec )
+            [ioc, cid, filename, addressoffset, parse, save, handle_read, self]( const boost::system::error_code &ec )
             {
                 if ( !ec )
                 {
                     // Timer expired, call StartFindingPeers again with captured parameters
-                    this->StartFindingPeers( ioc, cid, filename, addressoffset, parse, save, handle_read );
+                    self->StartFindingPeers( ioc, cid, filename, addressoffset, parse, save, handle_read );
                 }
                 else
                 {
                     // Handle error
-                    m_logger->error( "Error: {}", ec.message() );
+                    self->m_logger->error( "Error: {}", ec.message() );
                 }
             } );
     }

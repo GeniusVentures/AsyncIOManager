@@ -24,6 +24,12 @@ namespace sgns::ipfs_lite::ipfs::dht
     class IpfsDHT;
 }
 
+// Forward declaration for PeerInfo (seed provider registration)
+namespace libp2p::peer
+{
+    class PeerInfo;
+}
+
 namespace sgns
 {
 
@@ -53,7 +59,7 @@ namespace sgns
         using CompletionCallback = std::function<
             void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save )>;
 
-        /**ok
+        /**
          * Load Data on the MNN file
          * @param filename - MNN file part
          * @return Interpreter of MNN file
@@ -92,6 +98,11 @@ namespace sgns
         /// @brief Check if external DHT is available
         /// @return True if external DHT has been set
         bool hasExternalDHT() const;
+
+        /// @brief Register a seed provider for a CID on the IPFS loader's bitswap (DHT-less discovery)
+        /// @param cid  CID the seed provider serves
+        /// @param peerInfo - peers info for seed address
+        void addSeedProvider( const CID &cid, const libp2p::peer::PeerInfo &peerInfo );
 
     private:
         sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger( "IPFSLoader" );
