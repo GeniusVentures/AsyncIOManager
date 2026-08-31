@@ -195,7 +195,9 @@ if(ASYNC_IO_MANAGER_NETWORK_TESTS)
     # -Wmissing-template-arg-list-after-template-kw (error by default);
     # same conformance drift as example/MNNExample.cpp. Match the project's
     # existing -Wno-* handling for toolchain noise.
-    target_compile_options(ipfs_device_test PRIVATE
-        -Wno-missing-template-arg-list-after-template-kw
-    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(ipfs_device_test PRIVATE
+            -Wno-missing-template-arg-list-after-template-kw
+        )
+    endif()
 endif()

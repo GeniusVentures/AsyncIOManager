@@ -123,15 +123,26 @@ namespace sgns
         }
 
         auto peer_id = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
-        // Capture shared_ptr to keep this object alive during callback
-        auto self = shared_from_this();
+        (void) peer_id;
+        // Capture shared_ptr to keep this object alive during the async DHT
+        // lookup — the caller's shared_ptr may be released as soon as the
+        // posting lambda finishes, and the callback below would otherwise
+        // capture a dangling raw `this` (RequestBlockMain does the same).
+        auto self       = shared_from_this();
         auto findResult = dht_->FindProviders(
             cid,
-            [self, ioc, cid, filename, addressoffset, parse, save, handle_read]( libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
+            [self, ioc, cid, filename, addressoffset, parse, save, handle_read](
+                libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
             {
                 if ( !res )
                 {
                     self->m_logger->error( "Cannot find providers: {}", res.error().message() );
+                    // Always deliver a completion to the caller — swallowing
+                    // the error here makes every caller hang on its ioc wait.
+                    boost::asio::post( *ioc,
+                                       [handle_read, ioc]() {
+                                           handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false, false );
+                                       } );
                     return false;
                 }
                 auto &providers = res.value();
@@ -159,10 +170,16 @@ namespace sgns
             } );
         if ( !findResult )
         {
-            m_logger->error( "Failed to start FindProviders: {}", findResult.error().message() );
+            self->m_logger->error( "Failed to start provider search: {}", findResult.error().message() );
+            // Sync failure to even start the search must also deliver a
+            // completion, otherwise callers wait forever on handle_read.
+            boost::asio::post( *ioc,
+                               [handle_read, ioc]() {
+                                   handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false, false );
+                               } );
+            return false;
         }
-        //});
-        return false;
+        return true;
     }
 
     void IPFSDevice::StartFindingPeersWithRetry( std::shared_ptr<boost::asio::io_context> ioc,

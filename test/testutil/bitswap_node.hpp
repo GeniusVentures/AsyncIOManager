@@ -14,12 +14,24 @@
 #include <libp2p/crypto/hmac_provider/hmac_provider_impl.hpp>
 #include <libp2p/crypto/crypto_provider/crypto_provider_impl.hpp>
 #include <libp2p/crypto/key_validator/key_validator_impl.hpp>
+#include <libp2p/crypto/key_marshaller/key_marshaller_impl.hpp>
 #include <libp2p/security/noise.hpp>
 #include <libp2p/protocol/factory/protocol_factory.hpp>
 #include <libp2p/peer/peer_repository.hpp>
 #include <libp2p/peer/address_repository.hpp>
+#include <libp2p/peer/impl/identity_manager_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/log/configurator.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <libp2p/protocol/kademlia/config.hpp>
+#include <libp2p/protocol/kademlia/impl/kademlia_impl.hpp>
+#include <libp2p/protocol/kademlia/impl/content_routing_table_impl.hpp>
+#include <libp2p/protocol/kademlia/impl/peer_routing_table_impl.hpp>
+#include <libp2p/protocol/kademlia/impl/storage_backend_default.hpp>
+#include <libp2p/protocol/kademlia/impl/storage_impl.hpp>
+#include <libp2p/protocol/kademlia/impl/validator_default.hpp>
+#include <ipfs_lite/dht/kademlia_dht.hpp>
 
 #include <memory>
 #include <mutex>
@@ -48,7 +60,7 @@ groups:
     level: info
     children:
       - name: libp2p
-        level: warn
+        level: debug
 # ----------------
             )" );
 
@@ -83,6 +95,9 @@ groups:
                    libp2p::crypto::Key::Type::Ed25519,
                    libp2p::crypto::common::RSAKeyType::RSA2048 )
                    .value();
+        // Keep our own copy — the injector binding below moves from *keys,
+        // and the DHT's IdentityManager needs the same keypair as the host.
+        auto keyPair = *keys;
 
         // Event bus (required by Bitswap constructor)
         event_bus_ = std::make_shared<libp2p::event::Bus>();
@@ -131,8 +146,68 @@ groups:
         bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *host_, *event_bus_, io_context_ );
         bitswap_->initialize();
 
+        // Kademlia DHT on the same host — both nodes act as DHT servers
+        // (enableServer=true) so a private 2-node cluster can provide/find
+        // CIDs without bootstrapping to the public IPFS network.
+        // NOTE: KademliaImpl & friends hold const& to the config, so it must
+        // outlive them — hence the by-value member.
+        kademliaConfig_               = std::make_shared<libp2p::protocol::kademlia::Config>();
+        kademliaConfig_->enableServer = true;
+        // Debug builds on Windows are too slow for the default 3s connection
+        // timeout — kademlia executors give up just as the Noise handshake
+        // completes. Random walk is needless dial traffic in a 2-node test
+        // cluster (startDHT() seeds the routing table directly).
+        kademliaConfig_->connectionTimeout = std::chrono::seconds( 15 );
+        kademliaConfig_->randomWalk.enabled = false;
+        // FindProvidersExecutor uses randomWalk.timeout as its overall
+        // deadline — the default 10s can expire mid-handshake on a cold
+        // dial in Debug builds.
+        kademliaConfig_->randomWalk.timeout = std::chrono::seconds( 30 );
+        auto schedulerBackend = std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_context_ );
+        scheduler_            = std::make_shared<libp2p::basic::SchedulerImpl>(
+            schedulerBackend, libp2p::basic::SchedulerImpl::Config{} );
+        auto storage = std::make_shared<libp2p::protocol::kademlia::StorageImpl>(
+            *kademliaConfig_,
+            std::make_shared<libp2p::protocol::kademlia::StorageBackendDefault>(),
+            scheduler_ );
+        auto contentRoutingTable = std::make_shared<libp2p::protocol::kademlia::ContentRoutingTableImpl>(
+            *kademliaConfig_, *scheduler_, event_bus_ );
+        auto identityManager = std::make_shared<libp2p::peer::IdentityManagerImpl>(
+            keyPair,
+            std::make_shared<libp2p::crypto::marshaller::KeyMarshallerImpl>(
+                std::make_shared<libp2p::crypto::validator::KeyValidatorImpl>( crypto_provider ) ) );
+        auto peerRoutingTable = std::make_shared<libp2p::protocol::kademlia::PeerRoutingTableImpl>(
+            *kademliaConfig_, identityManager, event_bus_ );
+        kademlia_ = std::make_shared<libp2p::protocol::kademlia::KademliaImpl>(
+            *kademliaConfig_,
+            host_,
+            storage,
+            contentRoutingTable,
+            peerRoutingTable,
+            std::make_shared<libp2p::protocol::kademlia::ValidatorDefault>(),
+            scheduler_,
+            event_bus_,
+            std::make_shared<libp2p::crypto::random::BoostRandomGenerator>() );
+
         // Background IO thread
         io_thread_ = std::thread( [this]() { io_context_->run(); } );
+    }
+
+    /// @brief Start the DHT. bootstrapPeers are dialed into kademlia's
+    ///        routing table (in tests: the other node of the cluster).
+    void startDHT( const std::vector<libp2p::peer::PeerInfo> &bootstrapPeers = {} )
+    {
+        std::vector<std::string> bootstrapAddresses;
+        for ( auto &peer : bootstrapPeers )
+        {
+            for ( auto &addr : peer.addresses )
+            {
+                bootstrapAddresses.push_back( std::string( addr.getStringAddress() ) + "/p2p/" + peer.id.toBase58() );
+            }
+        }
+        dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>(
+            kademlia_, std::move( bootstrapAddresses ), io_context_ );
+        dht_->Start();
     }
 
     ~BitswapNode()
@@ -150,7 +225,18 @@ groups:
         {
             io_thread_.join();
         }
-        // bitswap_ and event_bus_ are destroyed naturally after IO drains
+        // Explicit, dependency-safe teardown order (member-declaration order
+        // alone destroys io_context_ before its users): DHT (its timer and
+        // kademlia refs) -> bitswap -> kademlia -> host -> scheduler -> bus,
+        // io_context_ last.
+        dht_.reset();
+        bitswap_.reset();
+        kademlia_.reset();
+        kademliaConfig_.reset();
+        host_.reset();
+        scheduler_.reset();
+        event_bus_.reset();
+        io_context_.reset();
     }
 
     BitswapNode( const BitswapNode & )            = delete;
@@ -158,6 +244,7 @@ groups:
 
     std::shared_ptr<libp2p::Host>                 getHost() const { return host_; }
     std::shared_ptr<sgns::ipfs_bitswap::Bitswap>  getBitswap() const { return bitswap_; }
+    std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> getDHT() const { return dht_; }
     std::shared_ptr<boost::asio::io_context>      getIOContext() const { return io_context_; }
 
     libp2p::peer::PeerInfo getPeerInfo() const
@@ -167,10 +254,14 @@ groups:
     }
 
 private:
-    std::shared_ptr<libp2p::Host>                  host_;
-    std::shared_ptr<sgns::ipfs_bitswap::Bitswap>   bitswap_;
-    std::shared_ptr<libp2p::event::Bus>            event_bus_;
-    std::shared_ptr<boost::asio::io_context>       io_context_;
-    std::unique_ptr<boost::asio::io_context::work> work_guard_;
-    std::thread                                    io_thread_;
+    std::shared_ptr<libp2p::Host>                             host_;
+    std::shared_ptr<sgns::ipfs_bitswap::Bitswap>              bitswap_;
+    std::shared_ptr<libp2p::protocol::kademlia::Config>       kademliaConfig_;
+    std::shared_ptr<libp2p::protocol::kademlia::KademliaImpl> kademlia_;
+    std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT>      dht_;
+    std::shared_ptr<libp2p::event::Bus>                       event_bus_;
+    std::shared_ptr<boost::asio::io_context>                  io_context_;
+    std::shared_ptr<libp2p::basic::SchedulerImpl>             scheduler_;
+    std::unique_ptr<boost::asio::io_context::work>            work_guard_;
+    std::thread                                               io_thread_;
 };

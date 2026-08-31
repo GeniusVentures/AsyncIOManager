@@ -24,10 +24,10 @@ namespace sgns::ipfs_lite::ipfs::dht
     class IpfsDHT;
 }
 
-// Forward declaration for DHT
-namespace libp2p
+// Forward declaration for PeerInfo (seed provider registration)
+namespace libp2p::peer
 {
-    class PeerInfo;
+    struct PeerInfo;
 }
 
 namespace sgns
@@ -36,7 +36,7 @@ namespace sgns
     /**
      * This class is for loading files from IPFS
      */
-    class IPFSLoader: public FileLoader
+    class IPFSLoader : public FileLoader
     {
         SINGLETON_PTR( IPFSLoader );
 
@@ -59,7 +59,7 @@ namespace sgns
         using CompletionCallback = std::function<
             void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save )>;
 
-        /**ok
+        /**
          * Load Data on the MNN file
          * @param filename - MNN file part
          * @return Interpreter of MNN file
