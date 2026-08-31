@@ -114,6 +114,14 @@ namespace sgns
             return RequestBlockMain( ioc, cid, filename, addressoffset, parse, save, handle_read );
         }
 
+        if ( !bitswap_->GetProviders( cid ).empty() )
+        {
+            // A seed provider is registered for this CID - the registry is
+            // authoritative, skip DHT discovery entirely
+            m_logger->info( "Seed provider registered for CID, skipping DHT discovery" );
+            return RequestBlockMain( ioc, cid, filename, addressoffset, parse, save, handle_read );
+        }
+
         auto peer_id = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
         // Capture shared_ptr to keep this object alive during callback
         auto self = shared_from_this();
