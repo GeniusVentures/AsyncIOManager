@@ -80,13 +80,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| MNN-01 | Phase 4 | Pending |
+| MNN-02 | Phase 1 | Pending |
+| MNN-03 | Phase 4 | Pending |
+| MNN-04 | Phase 1 | Pending |
+| MNN-05 | Phase 1 | Pending |
+| MNN-06 | Phase 4 | Pending |
+| FILE-01 | Phase 1 | Pending |
+| FILE-02 | Phase 1 | Pending |
+| FILE-03 | Phase 1 | Pending |
+| FILE-04 | Phase 1 | Pending |
+| PLAT-01 | Phase 2 | Pending |
+| PLAT-02 | Phase 2 | Pending |
+| PLAT-03 | Phase 2 | Pending |
+| PLAT-04 | Phase 2 | Pending |
+| PARSE-01 | Phase 3 | Pending |
+| PARSE-02 | Phase 3 | Pending |
+| PARSE-03 | Phase 3 | Pending |
+| PARSE-04 | Phase 3 | Pending |
+| TEST-01 | Phase 1 | Pending |
+| TEST-02 | Phase 1 | Pending |
+| TEST-03 | Phase 5 | Pending |
+| TEST-04 | Phase 5 | Pending |
+| BUILD-01 | Phase 4 | Pending |
+| BUILD-02 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24 ⚠️
+- Mapped to phases: 24/24 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-09-03*
-*Last updated: 2026-09-03 after initialization*
+*Last updated: 2026-09-03 after roadmap creation*
