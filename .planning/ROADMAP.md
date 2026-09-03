@@ -34,7 +34,11 @@ total_phases: 5
   3. `localfile_loader_test` and `localfile_saver_test` targets exist (covering sync load, async load, nonexistent-file error, sync save, null-data error, async save) and pass; `filemanager_test` expects `LocalFileLoader`/`LocalFileSaver` dispatch and passes
   4. Windows build with `BUILD_TESTING=ON` configures, compiles, and `ctest` is green
   5. `grep -ri mnn include/ src/ test/` returns no matches (doc comments scrubbed; root `CMakeLists.txt` MNN purge deferred to Phase 4 by design)
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Rename transaction: LocalFile triad + MNN code purge + mnn:// rejection test (red→green vertical slice)
+- [ ] 01-02-PLAN.md — MNN doc-comment scrub of surviving headers + full Phase-1 verification gate (zero-grep + ctest)
 
 ### Phase 2: LocalFileCommon Platform Split
 **Goal:** The local-file device layer exists as separate Windows and POSIX source+header pairs selected by CMake, with zero platform branching inside any local-file source file
