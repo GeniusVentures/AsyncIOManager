@@ -381,16 +381,18 @@ Not applicable in the ecosystem sense — no external technology adoption this p
 
 No other assumptions: every code-level claim above was read or executed against the workspace this session.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Criterion 5's exact verification contract (decision needed at plan review)**
+1. **Criterion 5's exact verification contract (decision needed at plan review)** — RESOLVED
    - What we know: literal `grep -ri mnn include/ src/ test/` can never be empty while the `mnn://` rejection test exists (criterion 1) and `test/1.mnn`/`test/2.mnn` remain (MNN-03 → Phase 4).
    - What's unclear: which precise command the boss/user will accept as "criterion 5 passes".
    - Recommendation: adopt `git grep -iI mnn -- include src test ":(exclude)test/src/filemanager_test.cpp"` → must be empty; document the two *intentional* residual `mnn` mentions (rejection test strings; binary fixtures) in the phase completion notes. Planner should surface this in the plan header so it's approved before execution.
-2. **Build topology for criterion 4: wrapper `TESTING=ON` vs root `BUILD_TESTING=ON`**
+   - **RESOLUTION (orchestrator constraints; implemented by the plans):** adopted as stated — the criterion-5 grep contract is `git grep -iI mnn -- include src test ":(exclude)test/src/filemanager_test.cpp"` returning empty (zero output, exit code 1). The two intentional residuals (rejection-test strings in test/src/filemanager_test.cpp per D-06; binary fixtures test/1.mnn, test/2.mnn pending MNN-03 in Phase 4) are documented in the phase completion notes. Enforced by Plan 02 Task 1 verify and the Plan 02 Task 2 gate (verification items 3-4).
+2. **Build topology for criterion 4: wrapper `TESTING=ON` vs root `BUILD_TESTING=ON`** — RESOLVED
    - What we know: wrapper path is proven end-to-end in this environment (existing green tree); root path matches the criterion's letter but has never been configured here.
    - What's unclear: whether a root-path configure resolves all ~20 CONFIG packages with a reasonable `CMAKE_PREFIX_PATH`.
    - Recommendation: primary = wrapper path (`-DTESTING=ON`, fresh Debug reconfigure), noting in VERIFICATION that `BUILD_TESTING=ON`'s *intent* (tests enabled, ctest green) is thereby satisfied; optional stretch = one root-path scratch configure attempt; if it fails fast, record A2 as closed-negative and move on. Budget: ≤15 min.
+   - **RESOLUTION (orchestrator constraints; implemented by the plans):** wrapper `TESTING=ON` on build/Windows (VS 17 2022 generator) is the primary build gate for criterion 4; root `BUILD_TESTING=ON` is fallback stretch only. Implemented by Plan 01 Task 2 verify (three file-based suites built and run on the wrapper tree) and Plan 02 Task 2 (full ctest gate, with the root-path configure as the optional stretch).
 
 ## Environment Availability
 
