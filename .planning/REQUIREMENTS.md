@@ -9,12 +9,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### MNN Removal
 
-- [ ] **MNN-01**: `find_package(MNN)` and all MNN include/link references are removed from root `CMakeLists.txt` and `src/CMakeLists.txt`
+- [x] **MNN-01**: `find_package(MNN)` and all MNN include/link references are removed from root `CMakeLists.txt` and `src/CMakeLists.txt`
 - [ ] **MNN-02**: `include/MNNCommon.hpp`, `include/MNNLoader.hpp`, `include/MNNSaver.hpp`, `src/MNNLoader.cpp`, `src/MNNSaver.cpp`, `test/base_mnn_test.hpp` are deleted
-- [ ] **MNN-03**: `test/1.mnn` and `test/2.mnn` assets are replaced with generic binary test fixtures (e.g. `test/*.bin`)
+- [x] **MNN-03**: `test/1.mnn` and `test/2.mnn` assets are replaced with generic binary test fixtures (e.g. `test/*.bin`)
 - [ ] **MNN-04**: `mnn://` save prefix registration is removed; `file://` remains the only local save prefix
 - [ ] **MNN-05**: All MNN references in doc comments (`@param parse - ... (for MNN)`, "Load Data on the MNN file", etc.) are scrubbed from headers and sources
-- [ ] **MNN-06**: Example app contains no MNN inference code or MNN library references (see FILE-11)
+- [x] **MNN-06**: Example app contains no MNN inference code or MNN library references (see FILE-11)
 
 ### LocalFile Rename
 
@@ -43,7 +43,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **TEST-02**: `filemanager_test` dispatch expectations updated to `LocalFileLoader`/`LocalFileSaver` names
 - [ ] **TEST-03**: All tests reference generic fixtures, not `.mnn` files
 - [ ] **TEST-04**: Full test suite builds and passes on Windows (`BUILD_TESTING=ON`)
-- [ ] **BUILD-01**: `MNNExample` is replaced by a generic example (e.g. `FileExample`) demonstrating `file://` load and save via `FileManager`
+- [x] **BUILD-01**: `MNNExample` is replaced by a generic example (e.g. `FileExample`) demonstrating `file://` load and save via `FileManager`
 - [ ] **BUILD-02**: Library builds clean on Windows with zero MNN dependency; `grep -ri mnn` over `include/ src/ test/ example/ CMakeLists.txt` returns no matches
 
 ## v2 Requirements
@@ -80,12 +80,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MNN-01 | Phase 4 | Pending |
+| MNN-01 | Phase 4 | Complete |
 | MNN-02 | Phase 1 | Pending |
-| MNN-03 | Phase 4 | Pending |
+| MNN-03 | Phase 4 | Complete |
 | MNN-04 | Phase 1 | Pending |
 | MNN-05 | Phase 1 | Pending |
-| MNN-06 | Phase 4 | Pending |
+| MNN-06 | Phase 4 | Complete |
 | FILE-01 | Phase 1 | Pending |
 | FILE-02 | Phase 1 | Pending |
 | FILE-03 | Phase 1 | Pending |
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-02 | Phase 1 | Pending |
 | TEST-03 | Phase 5 | Pending |
 | TEST-04 | Phase 5 | Pending |
-| BUILD-01 | Phase 4 | Pending |
+| BUILD-01 | Phase 4 | Complete |
 | BUILD-02 | Phase 5 | Pending |
 
 **Coverage:**
