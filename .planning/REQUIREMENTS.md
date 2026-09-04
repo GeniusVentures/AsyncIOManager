@@ -32,10 +32,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Parser Layer Removal
 
-- [ ] **PARSE-01**: `include/FileParser.hpp` is deleted; `RegisterParser`, `ParseData`, and the `parsers` map are removed from `FileManager`
-- [ ] **PARSE-02**: The `parse` bool is removed from `FileLoader::LoadASync`, `FileManager::LoadASync`, `CompletionCallback`, all per-protocol loader/device APIs (`HTTPLoader`, `IPFSLoader`, `SFTPLoader`, `WSLoader`, and `*Common` devices), and all call sites
-- [ ] **PARSE-03**: The `save` bool remains in all signatures and the auto-save-after-load flow keeps working
-- [ ] **PARSE-04**: No behavioral change to load/save paths beyond signature cleanup (callbacks still receive `ioc`, `ResultType`, `save`)
+- [x] **PARSE-01**: `include/FileParser.hpp` is deleted; `RegisterParser`, `ParseData`, and the `parsers` map are removed from `FileManager`
+- [x] **PARSE-02**: The `parse` bool is removed from `FileLoader::LoadASync`, `FileManager::LoadASync`, `CompletionCallback`, all per-protocol loader/device APIs (`HTTPLoader`, `IPFSLoader`, `SFTPLoader`, `WSLoader`, and `*Common` devices), and all call sites
+- [x] **PARSE-03**: The `save` bool remains in all signatures and the auto-save-after-load flow keeps working
+- [x] **PARSE-04**: No behavioral change to load/save paths beyond signature cleanup (callbacks still receive `ioc`, `ResultType`, `save`)
 
 ### Build & Tests
 
@@ -94,10 +94,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLAT-02 | Phase 2 | Complete |
 | PLAT-03 | Phase 2 | Complete |
 | PLAT-04 | Phase 2 | Complete |
-| PARSE-01 | Phase 3 | Pending |
-| PARSE-02 | Phase 3 | Pending |
-| PARSE-03 | Phase 3 | Pending |
-| PARSE-04 | Phase 3 | Pending |
+| PARSE-01 | Phase 3 | Complete |
+| PARSE-02 | Phase 3 | Complete |
+| PARSE-03 | Phase 3 | Complete |
+| PARSE-04 | Phase 3 | Complete |
 | TEST-01 | Phase 1 | Pending |
 | TEST-02 | Phase 1 | Pending |
 | TEST-03 | Phase 5 | Pending |
