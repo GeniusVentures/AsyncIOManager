@@ -39,6 +39,16 @@ target_link_libraries(filemanager_test
     asiomgr_testutil
 )
 
+addtest(no_ifdef_test
+    no_ifdef_test.cpp
+)
+# Absolute source-dir paths injected at compile time (TEST_CERT_DIR pattern);
+# CMake keeps forward slashes on Windows — safe for std::ifstream from test_bin/Debug/.
+target_compile_definitions(no_ifdef_test PRIVATE
+    LOCALFILE_INCLUDE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../include"
+    LOCALFILE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../src"
+)
+
 # ---------------------------------------------------------------------------
 # Phase 3: Network-dependent tests (gated behind ASYNC_IO_MANAGER_NETWORK_TESTS)
 # ---------------------------------------------------------------------------
