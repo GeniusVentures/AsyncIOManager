@@ -62,7 +62,16 @@ Plans:
   4. Any shared declarations live in a platform-neutral header with no `#ifdef _WIN32`
   5. Windows build + full test suite remain green after the split
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Platform-split transaction: win/posix pairs (verbatim move + D-12/D-13 POSIX fixes), neutral umbrella (D-15), CMake `if(WIN32)/elseif(UNIX)` selection + `ASIOMGR_LOCALFILE_HEADER` define (D-10), green-build gate
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Permanent zero-#ifdef guard (`no_ifdef_test` via `addtest()`, D-17/D-18) + phase-end grep gate + full-suite verification + optional WSL POSIX syntax stretch
 
 ### Phase 3: Parser Layer Removal
 
