@@ -37,7 +37,7 @@ TEST_F( FileManagerIntegrationTest, InitializeSingletons_RegistersAllActiveHandl
 // Dispatch tests — happy paths
 // ---------------------------------------------------------------------------
 
-TEST_F( FileManagerIntegrationTest, LoadFile_FilePrefixDispatchesToMNNLoader )
+TEST_F( FileManagerIntegrationTest, LoadFile_FilePrefixDispatchesToLocalFileLoader )
 {
     const std::string expected = "dispatch load test";
     TempFile          tf( expected );
@@ -49,7 +49,7 @@ TEST_F( FileManagerIntegrationTest, LoadFile_FilePrefixDispatchesToMNNLoader )
     EXPECT_EQ( *content, expected );
 }
 
-TEST_F( FileManagerIntegrationTest, SaveFile_FilePrefixDispatchesToMNNSaver )
+TEST_F( FileManagerIntegrationTest, SaveFile_FilePrefixDispatchesToLocalFileSaver )
 {
     TempDir     dir;
     std::string filePath = ( dir.path() / "dispatch_save.bin" ).string();
@@ -132,7 +132,7 @@ TEST_F( FileManagerIntegrationTest, OutstandingOperations_IncrementAndDecrement 
     ASSERT_TRUE( ok ) << "Timed out waiting for async load";
 }
 
-TEST_F( FileManagerIntegrationTest, SaveASync_FilePrefixDispatchesToMNNSaver )
+TEST_F( FileManagerIntegrationTest, SaveASync_FilePrefixDispatchesToLocalFileSaver )
 {
     IOContextRunner runner;
     TempDir         dir;
@@ -143,7 +143,7 @@ TEST_F( FileManagerIntegrationTest, SaveASync_FilePrefixDispatchesToMNNSaver )
 
     auto data = makeSingleFileResult( fileName, content );
 
-    // Pass directory as URL; MNNSaver appends the data filename
+    // Pass directory as URL; LocalFileSaver appends the data filename
     FileManager::GetInstance().SaveASync(
         "file://" + dir.pathString() + "/", data, runner.ioc(),
         [&]( FileManager::ResultType ) { completed = true; } );

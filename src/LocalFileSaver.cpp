@@ -1,5 +1,5 @@
 /*
- * MNNSaver.cpp
+ * LocalFileSaver.cpp
  */
 
 #include <iostream>
@@ -10,16 +10,16 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include "FileManager.hpp"
-#include "MNNSaver.hpp"
-#include "FILECommon.hpp"
+#include "LocalFileSaver.hpp"
+#include "LocalFileCommon.hpp"
 
-OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, MNNSaver::Error, e )
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, LocalFileSaver::Error, e )
 {
     switch ( e )
     {
-        case sgns::MNNSaver::Error::READ_ERROR:
+        case sgns::LocalFileSaver::Error::READ_ERROR:
             return "File could not be read";
-        case sgns::MNNSaver::Error::FILE_OPEN_FAIL:
+        case sgns::LocalFileSaver::Error::FILE_OPEN_FAIL:
             return "File could not be opened";
     }
     return "Unknown error";
@@ -27,23 +27,22 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, MNNSaver::Error, e )
 
 namespace sgns
 {
-    MNNSaver *MNNSaver::_instance = nullptr;
+    LocalFileSaver *LocalFileSaver::_instance = nullptr;
 
-    void MNNSaver::InitializeSingleton()
+    void LocalFileSaver::InitializeSingleton()
     {
         if ( _instance == nullptr )
         {
-            _instance = new MNNSaver();
+            _instance = new LocalFileSaver();
         }
     }
 
-    MNNSaver::MNNSaver()
+    LocalFileSaver::LocalFileSaver()
     {
         FileManager::GetInstance().RegisterSaver( "file", this );
-        FileManager::GetInstance().RegisterSaver( "mnn", this );
     }
 
-    void MNNSaver::SaveFile( std::string filename, std::shared_ptr<void> data )
+    void LocalFileSaver::SaveFile( std::string filename, std::shared_ptr<void> data )
     {
         if ( data == nullptr )
         {
@@ -59,7 +58,7 @@ namespace sgns
         outputFile.close();
     }
 
-    void MNNSaver::SaveASync( std::shared_ptr<boost::asio::io_context>                            ioc,
+    void LocalFileSaver::SaveASync( std::shared_ptr<boost::asio::io_context>                            ioc,
                               std::function<void( std::shared_ptr<boost::asio::io_context> ioc )> handle_write,
                               std::string                                                         filename,
                               ResultType                                                          data,
@@ -93,7 +92,7 @@ namespace sgns
 
             //Create Steam for async writes
             std::ofstream file( directoryWithFile, std::ios::binary );
-            auto          fileDevice = std::make_shared<FILEDevice>( ioc, directoryWithFile, 1 );
+            auto          fileDevice = std::make_shared<LocalFileDevice>( ioc, directoryWithFile, 1 );
             auto          tryopen    = fileDevice->Open();
             if ( tryopen )
             {

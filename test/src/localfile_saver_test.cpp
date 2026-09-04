@@ -1,5 +1,5 @@
 /**
- * Tests for MNNSaver — local file saving via "file://" and "mnn://" prefixes.
+ * Tests for LocalFileSaver — local file saving via "file://" prefix.
  */
 
 #include <gtest/gtest.h>
@@ -12,7 +12,7 @@
 
 using namespace sgns;
 
-class MNNSaverTest : public FileManagerTestFixture
+class LocalFileSaverTest : public FileManagerTestFixture
 {
 };
 
@@ -20,7 +20,7 @@ class MNNSaverTest : public FileManagerTestFixture
 // Synchronous SaveFile — happy path
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNSaverTest, SaveFile_WritesContent )
+TEST_F( LocalFileSaverTest, SaveFile_WritesContent )
 {
     TempDir     dir;
     std::string filePath = ( dir.path() / "test_output.bin" ).string();
@@ -41,7 +41,7 @@ TEST_F( MNNSaverTest, SaveFile_WritesContent )
 // Synchronous SaveFile — unhappy paths
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNSaverTest, SaveFile_NullDataThrows )
+TEST_F( LocalFileSaverTest, SaveFile_NullDataThrows )
 {
     EXPECT_THROW( { FileManager::GetInstance().SaveFile( "file:///tmp/output.bin", nullptr ); },
                   std::range_error );
@@ -51,7 +51,7 @@ TEST_F( MNNSaverTest, SaveFile_NullDataThrows )
 // Asynchronous SaveASync — happy path: single file
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNSaverTest, SaveASync_SingleFile )
+TEST_F( LocalFileSaverTest, SaveASync_SingleFile )
 {
     IOContextRunner runner;
     TempDir         dir;
@@ -64,7 +64,7 @@ TEST_F( MNNSaverTest, SaveASync_SingleFile )
 
     auto data = makeSingleFileResult( fileName, content );
 
-    // Pass the directory as the URL; MNNSaver appends the data filename to it
+    // Pass the directory as the URL; LocalFileSaver appends the data filename to it
     FileManager::GetInstance().SaveASync(
         "file://" + dir.pathString() + "/", data, runner.ioc(),
         [&]( FileManager::ResultType result )
@@ -92,7 +92,7 @@ TEST_F( MNNSaverTest, SaveASync_SingleFile )
 // Asynchronous SaveASync — happy path: multiple files with subdirectories
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNSaverTest, SaveASync_MultipleFilesWithSubdirs )
+TEST_F( LocalFileSaverTest, SaveASync_MultipleFilesWithSubdirs )
 {
     IOContextRunner             runner;
     TempDir                     dir;
@@ -130,7 +130,7 @@ TEST_F( MNNSaverTest, SaveASync_MultipleFilesWithSubdirs )
 // Asynchronous SaveASync — unhappy paths
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNSaverTest, SaveASync_NullDataThrows )
+TEST_F( LocalFileSaverTest, SaveASync_NullDataThrows )
 {
     IOContextRunner runner;
     TempDir         dir;

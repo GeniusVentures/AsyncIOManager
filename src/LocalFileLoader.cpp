@@ -4,16 +4,16 @@
 #include <streambuf>
 #include <string>
 #include "FileManager.hpp"
-#include "MNNLoader.hpp"
-#include "FILECommon.hpp"
+#include "LocalFileLoader.hpp"
+#include "LocalFileCommon.hpp"
 
-OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, MNNLoader::Error, e )
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, LocalFileLoader::Error, e )
 {
     switch ( e )
     {
-        case sgns::MNNLoader::Error::READ_ERROR:
+        case sgns::LocalFileLoader::Error::READ_ERROR:
             return "File could not be read";
-        case sgns::MNNLoader::Error::FILE_OPEN_FAIL:
+        case sgns::LocalFileLoader::Error::FILE_OPEN_FAIL:
             return "File could not be opened";
     }
     return "Unknown error";
@@ -21,22 +21,22 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, MNNLoader::Error, e )
 
 namespace sgns
 {
-    MNNLoader *MNNLoader::_instance = nullptr;
+    LocalFileLoader *LocalFileLoader::_instance = nullptr;
 
-    void MNNLoader::InitializeSingleton()
+    void LocalFileLoader::InitializeSingleton()
     {
         if ( _instance == nullptr )
         {
-            _instance = new MNNLoader();
+            _instance = new LocalFileLoader();
         }
     }
 
-    MNNLoader::MNNLoader()
+    LocalFileLoader::LocalFileLoader()
     {
         FileManager::GetInstance().RegisterLoader( "file", this );
     }
 
-    std::shared_ptr<void> MNNLoader::LoadFile( std::string filename )
+    std::shared_ptr<void> LocalFileLoader::LoadFile( std::string filename )
     {
         if ( !std::filesystem::exists( filename ) )
         {
@@ -54,7 +54,7 @@ namespace sgns
         return result;
     }
 
-    std::shared_ptr<void> MNNLoader::LoadASync( std::string                              filename,
+    std::shared_ptr<void> LocalFileLoader::LoadASync( std::string                              filename,
                                                 bool                                     parse,
                                                 bool                                     save,
                                                 std::shared_ptr<boost::asio::io_context> ioc,
@@ -62,7 +62,7 @@ namespace sgns
     {
         std::shared_ptr<string> result = std::make_shared<string>( "init" );
         // Create a file device which will have a stream_descriptor or stream_file based on whether we are on posix OS or not.
-        auto fileDevice = std::make_shared<FILEDevice>( ioc, filename, 0 );
+        auto fileDevice = std::make_shared<LocalFileDevice>( ioc, filename, 0 );
         auto tryopen    = fileDevice->Open();
         if ( tryopen )
         {

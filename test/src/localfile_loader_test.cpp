@@ -1,5 +1,5 @@
 /**
- * Tests for MNNLoader — local file loading via "file://" prefix.
+ * Tests for LocalFileLoader — local file loading via "file://" prefix.
  */
 
 #include <gtest/gtest.h>
@@ -9,7 +9,7 @@
 #include "testutil/test_fixture.hpp"
 #include <optional>
 
-class MNNLoaderTest : public FileManagerTestFixture
+class LocalFileLoaderTest : public FileManagerTestFixture
 {
 };
 
@@ -17,7 +17,7 @@ class MNNLoaderTest : public FileManagerTestFixture
 // Synchronous LoadFile — happy path
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNLoaderTest, LoadFile_ReadsExistingFile )
+TEST_F( LocalFileLoaderTest, LoadFile_ReadsExistingFile )
 {
     const std::string expected = "hello world from temp file";
     TempFile          tf( expected );
@@ -33,7 +33,7 @@ TEST_F( MNNLoaderTest, LoadFile_ReadsExistingFile )
 // Synchronous LoadFile — unhappy paths
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNLoaderTest, LoadFile_NonexistentFileThrows )
+TEST_F( LocalFileLoaderTest, LoadFile_NonexistentFileThrows )
 {
     EXPECT_THROW( { FileManager::GetInstance().LoadFile( "file:///nonexistent/path/xyz.abc" ); },
                   std::range_error );
@@ -43,7 +43,7 @@ TEST_F( MNNLoaderTest, LoadFile_NonexistentFileThrows )
 // Asynchronous LoadASync — happy path
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNLoaderTest, LoadASync_ReadsExistingFile )
+TEST_F( LocalFileLoaderTest, LoadASync_ReadsExistingFile )
 {
     const std::string expected = "async file content";
     TempFile          tf( expected );
@@ -80,7 +80,7 @@ TEST_F( MNNLoaderTest, LoadASync_ReadsExistingFile )
 // Asynchronous LoadASync — unhappy paths
 // ---------------------------------------------------------------------------
 
-TEST_F( MNNLoaderTest, LoadASync_NonexistentFileReturnsError )
+TEST_F( LocalFileLoaderTest, LoadASync_NonexistentFileReturnsError )
 {
     IOContextRunner runner;
 

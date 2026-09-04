@@ -1,19 +1,19 @@
 /**
- * Source file for the FILECommon
+ * Source file for the LocalFileCommon
  */
-#include "FILECommon.hpp"
+#include "LocalFileCommon.hpp"
 
 namespace sgns
 {
     using namespace boost::asio;
 
 #ifndef _WIN32
-    FILEDevice::FILEDevice( std::shared_ptr<boost::asio::io_context> ioc, std::string filename, int writemode ) :
+    LocalFileDevice::LocalFileDevice( std::shared_ptr<boost::asio::io_context> ioc, std::string filename, int writemode ) :
         file_( *ioc ), filename_( filename ), flags_( writemode == 0 ? O_RDONLY : O_WRONLY | O_CREAT )
     {
     } // Map writemode to basic POSIX flags (adjust as needed)
 
-    boost::system::error_code FILEDevice::Open()
+    boost::system::error_code LocalFileDevice::Open()
     {
         // POSIX-specific: Use file descriptor with ::open
         fd_ = ::open( filename_.c_str(),
@@ -37,12 +37,12 @@ namespace sgns
         return ec_; // Success: ec_.value() == 0
     }
 #else
-    FILEDevice::FILEDevice( std::shared_ptr<boost::asio::io_context> ioc, std::string filename, int writemode ) :
+    LocalFileDevice::LocalFileDevice( std::shared_ptr<boost::asio::io_context> ioc, std::string filename, int writemode ) :
         file_( *ioc ), filename_( filename ), flags_( writemode )
     {
     }
 
-    boost::system::error_code FILEDevice::Open()
+    boost::system::error_code LocalFileDevice::Open()
     {
         // Windows-specific: Use Boost.Asio stream_file with mode based on flags_
         boost::asio::stream_file::flags mode = ( flags_ == 0 ) ? boost::asio::stream_file::read_only

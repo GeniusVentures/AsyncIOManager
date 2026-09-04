@@ -9,20 +9,20 @@ message(WARNING "Boost LIBRARIES: ${Boost_LIBRARIES}")
 # Phase 2: File-based tests (always built when BUILD_TESTING=ON)
 # ---------------------------------------------------------------------------
 
-addtest(mnn_loader_test
-    mnn_loader_test.cpp
+addtest(localfile_loader_test
+    localfile_loader_test.cpp
 )
-target_link_libraries(mnn_loader_test
+target_link_libraries(localfile_loader_test
     spdlog::spdlog 
     protobuf::libprotobuf
     AsyncIOManager
     asiomgr_testutil
 )
 
-addtest(mnn_saver_test
-    mnn_saver_test.cpp
+addtest(localfile_saver_test
+    localfile_saver_test.cpp
 )
-target_link_libraries(mnn_saver_test
+target_link_libraries(localfile_saver_test
     spdlog::spdlog 
     protobuf::libprotobuf
     AsyncIOManager
@@ -193,7 +193,7 @@ if(ASYNC_IO_MANAGER_NETWORK_TESTS)
     )
     # bitswap_node.hpp's Boost.DI TEMPLATE_TO macro trips newer clang's
     # -Wmissing-template-arg-list-after-template-kw (error by default);
-    # same conformance drift as example/MNNExample.cpp. Match the project's
+    # same conformance drift as the example app. Match the project's
     # existing -Wno-* handling for toolchain noise.
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(ipfs_device_test PRIVATE

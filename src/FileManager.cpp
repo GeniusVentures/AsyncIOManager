@@ -1,7 +1,7 @@
 #include "FileManager.hpp"
 #include "URLStringUtil.h"
-#include "MNNLoader.hpp"
-#include "MNNSaver.hpp"
+#include "LocalFileLoader.hpp"
+#include "LocalFileSaver.hpp"
 #include "IPFSLoader.hpp"
 #include "IPFSSaver.hpp"
 #include "HTTPLoader.hpp"
@@ -29,14 +29,13 @@ void AsyncHandler( boost::system::error_code ec, std::size_t n, std::vector<char
 
 void FileManager::InitializeSingletons()
 {
-    sgns::MNNLoader::InitializeSingleton();
-    //sgns::MNNParser::InitializeSingleton();
+    sgns::LocalFileLoader::InitializeSingleton();
     //sgns::SFTPLoader::InitializeSingleton();
     sgns::HTTPLoader::InitializeSingleton();
     //sgns::WSLoader::InitializeSingleton();
     sgns::IPFSLoader::InitializeSingleton();
     sgns::IPFSSaver::InitializeSingleton();
-    sgns::MNNSaver::InitializeSingleton();
+    sgns::LocalFileSaver::InitializeSingleton();
     sgns::SFTPSaver::InitializeSingleton();
 }
 
@@ -68,13 +67,6 @@ shared_ptr<void> FileManager::LoadASync( const std::string                      
     {
         if ( buffers )
         {
-            //Parse Data
-            if ( parse )
-            {
-                auto parserIter = parsers.find( "mnn" );
-                auto parser     = dynamic_cast<FileParser *>( parserIter->second );
-                //shared_ptr<void> data = parser->ParseASync(buffer);
-            }
             //Save data or otherwise decrement counter of operations
             if ( save )
             {

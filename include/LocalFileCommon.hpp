@@ -1,5 +1,5 @@
 /**
- * Header file for the FILECommon
+ * Header file for the LocalFileCommon
  */
 #pragma once
 #ifndef _WIN32
@@ -27,7 +27,7 @@ namespace sgns
  * The class differs based on Windows, or POSIX based OS.
  */
 #ifndef _WIN32
-    class FILEDevice : public std::enable_shared_from_this<FILEDevice>
+    class LocalFileDevice : public std::enable_shared_from_this<LocalFileDevice>
     {
     public:
         /**
@@ -36,9 +36,9 @@ namespace sgns
          * @param filename - Path to location of file to load
          * @param writemode - 0 for read, 1 for write
          */
-        FILEDevice( std::shared_ptr<boost::asio::io_context> ioc, std::string filename, int writemode );
+        LocalFileDevice( std::shared_ptr<boost::asio::io_context> ioc, std::string filename, int writemode );
 
-        ~FILEDevice()
+        ~LocalFileDevice()
         {
             // Cleanup
             file_.close( ec_ );
@@ -56,7 +56,7 @@ namespace sgns
         }
 
     private:
-        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger( "FILECommon" );
+        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger( "LocalFileCommon" );
         //Common vars used for file loading
         boost::asio::posix::stream_descriptor file_;
         boost::system::error_code             ec_;
@@ -65,7 +65,7 @@ namespace sgns
         int                                   fd_ = -1;
     };
 #else
-    class FILEDevice : public std::enable_shared_from_this<FILEDevice>
+    class LocalFileDevice : public std::enable_shared_from_this<LocalFileDevice>
     {
     public:
         /**
@@ -74,9 +74,9 @@ namespace sgns
          * @param filename - Path to location of file to load
          * @param writemode - 0 for read, 1 for write
          */
-        FILEDevice( std::shared_ptr<boost::asio::io_context> ioc, std::string filename, int writemode );
+        LocalFileDevice( std::shared_ptr<boost::asio::io_context> ioc, std::string filename, int writemode );
 
-        ~FILEDevice()
+        ~LocalFileDevice()
         {
             // Cleanup
             file_.close();
@@ -93,7 +93,7 @@ namespace sgns
         }
 
     private:
-        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger( "FILECommon" );
+        sgns::asiomgr::Logger m_logger = sgns::asiomgr::createLogger( "LocalFileCommon" );
         //Common vars used for file loading
         boost::asio::stream_file  file_;
         boost::system::error_code ec_;

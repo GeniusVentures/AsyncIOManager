@@ -1,5 +1,5 @@
 /*
- * MNNSaver.hpp
+ * LocalFileSaver.hpp
  */
 
 #pragma once
@@ -9,10 +9,10 @@
 
 namespace sgns
 {
-    /// @brief class to handle "ipfs://" prefix in a filename to save to ipfs
-    class MNNSaver : public FileSaver
+    /// @brief class to handle "file://" prefix in a filename to save to local disk
+    class LocalFileSaver : public FileSaver
     {
-        SINGLETON_PTR( MNNSaver );
+        SINGLETON_PTR( LocalFileSaver );
 
     public:
         enum class Error
@@ -21,7 +21,7 @@ namespace sgns
             FILE_OPEN_FAIL = 2,
         };
         static void InitializeSingleton();
-        /// @brief save a file to ipfs, throws on error
+        /// @brief save a file to local disk, throws on error
         /// @param filename filename to save the file as
         virtual void SaveFile( std::string filename, std::shared_ptr<void> data ) override;
         virtual void SaveASync( std::shared_ptr<boost::asio::io_context>                            ioc,
