@@ -17,7 +17,7 @@ total_phases: 5
 
 - [ ] **Phase 1: LocalFile Rename & MNN Code Purge** - `MNNLoader`/`MNNSaver`/`FILECommon` become `LocalFileLoader`/`LocalFileSaver`/`LocalFileCommon`, MNN code files deleted, `mnn://` prefix removed, tests renamed in-phase
 - [x] **Phase 2: LocalFileCommon Platform Split** - Local-file device split into Windows/POSIX file pairs selected by CMake, zero `#ifdef` (completed 2026-09-04)
-- [ ] **Phase 3: Parser Layer Removal** - `parse` bool stripped from every API and callback; `FileParser` deleted; `save`-driven auto-save preserved
+- [x] **Phase 3: Parser Layer Removal** - `parse` bool stripped from every API and callback; `FileParser` deleted; `save`-driven auto-save preserved (completed 2026-09-04)
 - [ ] **Phase 4: Build Purge & Generic Example** - MNN removed from all CMake; `MNNExample` replaced by generic `file://` example; `.mnn` fixtures become generic binaries
 - [ ] **Phase 5: Zero-MNN Verification & Green Suite** - Acceptance gate: zero-MNN grep, full suite green on Windows, clean-tree end-to-end build
 
@@ -87,7 +87,7 @@ Plans:
   4. No behavioral change to load/save paths beyond signature cleanup — callbacks still receive `ioc`, `ResultType`, `save`
   5. Windows build + full test suite green after the signature change
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 **Wave 1**
@@ -96,7 +96,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — PARSE-02 atomic parse-bool strip (12 headers + 11 sources + 5 test files + D-22 example line) + D-23/D-24 phase-end gate (word-boundary grep + build + ctest)
+- [x] 03-02-PLAN.md — PARSE-02 atomic parse-bool strip (12 headers + 11 sources + 5 test files + D-22 example line) + D-23/D-24 phase-end gate (word-boundary grep + build + ctest)
 
 ### Phase 4: Build Purge & Generic Example
 
@@ -165,7 +165,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. LocalFile Rename & MNN Code Purge | 0/? | Not started | - |
 | 2. LocalFileCommon Platform Split | 2/2 | Complete    | 2026-09-04 |
-| 3. Parser Layer Removal | 1/2 | In Progress|  |
+| 3. Parser Layer Removal | 2/2 | Complete   | 2026-09-04 |
 | 4. Build Purge & Generic Example | 0/? | Not started | - |
 | 5. Zero-MNN Verification & Green Suite | 0/? | Not started | - |
 
