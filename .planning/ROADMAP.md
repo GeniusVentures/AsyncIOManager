@@ -18,7 +18,7 @@ total_phases: 5
 - [ ] **Phase 1: LocalFile Rename & MNN Code Purge** - `MNNLoader`/`MNNSaver`/`FILECommon` become `LocalFileLoader`/`LocalFileSaver`/`LocalFileCommon`, MNN code files deleted, `mnn://` prefix removed, tests renamed in-phase
 - [x] **Phase 2: LocalFileCommon Platform Split** - Local-file device split into Windows/POSIX file pairs selected by CMake, zero `#ifdef` (completed 2026-09-04)
 - [x] **Phase 3: Parser Layer Removal** - `parse` bool stripped from every API and callback; `FileParser` deleted; `save`-driven auto-save preserved (completed 2026-09-04)
-- [ ] **Phase 4: Build Purge & Generic Example** - MNN removed from all CMake; `MNNExample` replaced by generic `file://` example; `.mnn` fixtures become generic binaries
+- [x] **Phase 4: Build Purge & Generic Example** - MNN removed from all CMake; `MNNExample` replaced by generic `file://` example; `.mnn` fixtures become generic binaries (completed 2026-09-04)
 - [ ] **Phase 5: Zero-MNN Verification & Green Suite** - Acceptance gate: zero-MNN grep, full suite green on Windows, clean-tree end-to-end build
 
 ## Phase Details
@@ -111,7 +111,7 @@ Plans:
   3. `test/1.mnn` and `test/2.mnn` are replaced by generic binary fixtures (e.g. `test/*.bin`); no `.mnn` files remain under `test/`
   4. Windows build + full test suite green with the MNN-free build system
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 **Wave 1**
@@ -120,7 +120,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-02-PLAN.md — Fixture swap (.mnn → test/fixture.bin, D-29/D-30) + D-32 test neutralization (mnn:// → foo://) + phase-end consolidated dual-grep gate (MNN-03)
+- [x] 04-02-PLAN.md — Fixture swap (.mnn → test/fixture.bin, D-29/D-30) + D-32 test neutralization (mnn:// → foo://) + phase-end consolidated dual-grep gate (MNN-03)
 
 ### Phase 5: Zero-MNN Verification & Green Suite
 
@@ -175,7 +175,7 @@ Plans:
 | 1. LocalFile Rename & MNN Code Purge | 0/? | Not started | - |
 | 2. LocalFileCommon Platform Split | 2/2 | Complete    | 2026-09-04 |
 | 3. Parser Layer Removal | 2/2 | Complete    | 2026-09-04 |
-| 4. Build Purge & Generic Example | 1/2 | In Progress|  |
+| 4. Build Purge & Generic Example | 2/2 | Complete   | 2026-09-04 |
 | 5. Zero-MNN Verification & Green Suite | 0/? | Not started | - |
 
 ---
