@@ -23,6 +23,9 @@ Reliable async load/save of data across local and remote protocols behind one UR
 - ✓ spdlog-based logging factory with soralog bridging for libp2p — existing
 - ✓ GTest suite with xunit XML output and test WS server helper — existing
 - ✓ CMake package install (headers + `AsyncIOManagerTargets` export, version 0.1) — existing
+- ✓ Remove parser layer: delete `FileParser` interface, `RegisterParser`, `ParseData`, parsers map from `FileManager` — Validated in Phase 3: parser-layer-removal
+- ✓ Strip `parse` bool from all loader/saver APIs and `CompletionCallback` signatures (`save` bool stays) — Validated in Phase 3: parser-layer-removal
+- ✓ Auto-save-after-load chain (`LoadASync(save=true)` → registered saver) proven by test — Validated in Phase 3: parser-layer-removal
 
 ### Active
 
@@ -33,8 +36,6 @@ Reliable async load/save of data across local and remote protocols behind one UR
 - [ ] Delete MNN-specific files: `include/MNNCommon.hpp`, `include/MNNLoader.hpp`, `include/MNNSaver.hpp`, `src/MNNLoader.cpp`, `src/MNNSaver.cpp`, `test/base_mnn_test.hpp`
 - [ ] Replace `.mnn` test assets (`test/1.mnn`, `test/2.mnn`) with generic binary test fixtures
 - [ ] Remove `mnn://` save prefix registration; `file://` remains the local save prefix
-- [ ] Remove parser layer: delete `FileParser` interface, `RegisterParser`, `ParseData`, parsers map from `FileManager`
-- [ ] Strip `parse` bool from all loader/saver APIs and `CompletionCallback` signatures (`save` bool stays)
 - [ ] Replace `MNNExample` with a generic file:// load/save example
 - [ ] Rename/rewrite affected tests (`mnn_loader_test`, `mnn_saver_test`, `filemanager_test` references) and keep suite green
 - [ ] Scrub MNN references from doc comments across headers/sources
@@ -93,4 +94,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-03 after initialization*
+*Last updated: 2026-09-04 after Phase 3 completion (parser layer removed, parse-free API verified)*
