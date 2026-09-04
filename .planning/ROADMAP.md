@@ -111,12 +111,12 @@ Plans:
   3. `test/1.mnn` and `test/2.mnn` are replaced by generic binary fixtures (e.g. `test/*.bin`); no `.mnn` files remain under `test/`
   4. Windows build + full test suite green with the MNN-free build system
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — MNN CMake purge transaction (root + example + CommonBuildParameters D-31 + wrappers D1 + dead cmake/common.cmake) + minimal FileExample with two-phase ioc roundtrip (D-25/D-27/D-28) + build/grep/ctest/smoke gate (MNN-01, MNN-06, BUILD-01)
+- [x] 04-01-PLAN.md — MNN CMake purge transaction (root + example + CommonBuildParameters D-31 + wrappers D1 + dead cmake/common.cmake) + minimal FileExample with two-phase ioc roundtrip (D-25/D-27/D-28) + build/grep/ctest/smoke gate (MNN-01, MNN-06, BUILD-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -175,7 +175,7 @@ Plans:
 | 1. LocalFile Rename & MNN Code Purge | 0/? | Not started | - |
 | 2. LocalFileCommon Platform Split | 2/2 | Complete    | 2026-09-04 |
 | 3. Parser Layer Removal | 2/2 | Complete    | 2026-09-04 |
-| 4. Build Purge & Generic Example | 0/2 | Not started | - |
+| 4. Build Purge & Generic Example | 1/2 | In Progress|  |
 | 5. Zero-MNN Verification & Green Suite | 0/? | Not started | - |
 
 ---
