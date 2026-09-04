@@ -121,7 +121,7 @@ TEST_F( FileManagerIntegrationTest, SaveASync_UnregisteredPrefixThrows )
         std::range_error );
 }
 
-TEST_F( FileManagerIntegrationTest, SaveASync_MnnPrefixThrows )
+TEST_F( FileManagerIntegrationTest, SaveASync_FooPrefixThrows )
 {
     IOContextRunner runner;
     auto            data = makeSingleFileResult( "test.bin", "content" );
@@ -129,7 +129,7 @@ TEST_F( FileManagerIntegrationTest, SaveASync_MnnPrefixThrows )
     EXPECT_THROW(
         {
             FileManager::GetInstance().SaveASync(
-                "mnn://some/path", data, runner.ioc(), []( FileManager::ResultType ) {} );
+                "foo://some/path", data, runner.ioc(), []( FileManager::ResultType ) {} );
         },
         std::range_error );
 }
