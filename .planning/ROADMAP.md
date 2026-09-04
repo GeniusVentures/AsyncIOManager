@@ -87,7 +87,16 @@ Plans:
   4. No behavioral change to load/save paths beyond signature cleanup — callbacks still receive `ioc`, `ResultType`, `save`
   5. Windows build + full test suite green after the signature change
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — PARSE-01 registry deletion (FileParser.hpp, RegisterParser/ParseData/parsers, LoadFile 1-arg) + D-20 savers.find UB guard + D-19 auto-save chain test — independently green
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — PARSE-02 atomic parse-bool strip (12 headers + 11 sources + 5 test files + D-22 example line) + D-23/D-24 phase-end gate (word-boundary grep + build + ctest)
 
 ### Phase 4: Build Purge & Generic Example
 
