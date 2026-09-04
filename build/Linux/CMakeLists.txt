@@ -50,7 +50,4 @@ include_directories(
 # Include common build parameters
 include(../CommonBuildParameters.cmake)
 
-# install example binary to bin
-#SET(TESTAPP MNNExample )
-
 install(TARGETS ${TESTAPP} DESTINATION "${BUILD_FILELOADER_DIR}/bin")

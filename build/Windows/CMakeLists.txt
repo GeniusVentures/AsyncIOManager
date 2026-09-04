@@ -82,6 +82,6 @@ include_directories(
 include(../CommonBuildParameters.cmake)
 
 # install example binary to bin
-SET(TESTAPP MNNExample )
+SET(TESTAPP FileExample )
 
 install(TARGETS ${TESTAPP} DESTINATION "${BUILD_FILELOADER_DIR}/bin")

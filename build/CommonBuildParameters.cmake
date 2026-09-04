@@ -270,13 +270,6 @@ set(xxhash_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxhash")
 find_package(xxhash CONFIG REQUIRED)
 include_directories(${xxhash_INCLUDE_DIR})
 
-# --------------------------------------------------------
-# Set config of MNN
-set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
-set(MNN_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib")
-include_directories(${MNN_INCLUDE_DIR})
-set(MNN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../MNN/include")
-
 # ----------------------BUILD EXTERNAL PROJECT------------------
 # Set config of LIBSSH2
 set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")
