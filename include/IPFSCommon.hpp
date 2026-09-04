@@ -63,7 +63,7 @@ namespace sgns
 		 * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
 		 * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
 		 * @param buffers - Contains path/data loaded
-		 * @param parse - Whether to parse file upon completion (for MNN)
+		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
         using CompletionCallback = std::function<
@@ -109,7 +109,7 @@ namespace sgns
 		 * @param cid - IPFS Main CID to get from bitswap
 		 * @param filename - Filename for file, mostly for use if this is a single file.
 		 * @param addressoffset - Offset from list of addresses to use, usually want to call 0 on this as it will loop through from starting point if needed
-		 * @param parse - Whether to parse file upon completion (for MNN currently)
+		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 * @param handle_read - Filemanager callback on completion
 		 * @param status - Status function that will be updated with status codes as operation progresses
@@ -134,7 +134,7 @@ namespace sgns
 		 * @param cid - IPFS Main CID to get from bitswap
 		 * @param filename - Filename for file, mostly for use if this is a single file.
 		 * @param addressoffset - Offset from list of addresses to use, usually want to call 0 on this as it will loop through from starting point if needed
-		 * @param parse - Whether to parse file upon completion (for MNN currently)
+		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 * @param handle_read - Filemanager callback on completion
 		 * @param status - Status function that will be updated with status codes as operation progresses
@@ -207,7 +207,6 @@ namespace sgns
 
         //Default Bootstrap Servers
         std::vector<std::string> bootstrapAddresses_ = {
-            //"/dnsaddr/bootstrap.libp2p.io/ipfs/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
             //"/dnsaddr/bootstrap.libp2p.io/ipfs/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
             //"/dnsaddr/bootstrap.libp2p.io/ipfs/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
             //"/dnsaddr/bootstrap.libp2p.io/ipfs/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",

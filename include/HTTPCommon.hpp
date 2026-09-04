@@ -50,7 +50,7 @@ namespace sgns
 		 * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
 		 * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
 		 * @param buffers - Contains path/data loaded
-		 * @param parse - Whether to parse file upon completion (for MNN)
+		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
         using CompletionCallback = std::function<
@@ -61,7 +61,7 @@ namespace sgns
 		 * @param http_host - address of HTTP Server
 		 * @param http_path - File on HTTP server to get
 		 * @param http_port - Port for HTTPS Server
-		 * @param parse - Whether to parse file upon completion (for MNN currently)
+		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
         HTTPDevice( std::string http_host, std::string http_path, std::string http_port, bool parse, bool save );

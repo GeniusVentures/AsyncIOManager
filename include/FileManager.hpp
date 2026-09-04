@@ -64,7 +64,7 @@ public:
          * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
          * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
          * @param buffers - Contains path/data loaded
-         * @param parse - Whether to parse file upon completion (for MNN)
+         * @param parse - Whether to parse file upon completion
          * @param save - Whether to save the file to local disk upon completion
          */
     using CompletionCallback =
@@ -87,18 +87,18 @@ public:
     /// @param handlerLoader Handler class object that can load the data
     void RegisterLoader( const std::string &prefix, FileLoader *handlerLoader );
     /// @brief Register a synchronous Parser class to handle a specific extension suffix
-    /// @param suffix = ".mnn", ".jpg", etc from file://file.jpg
+    /// @param suffix = ".bin", ".jpg", etc from file://file.jpg
     /// @param handlerParser Handler class object that can parse the data
     void RegisterParser( const std::string &suffix, FileParser *handlerParser );
     /// @brief Register a synchronous saver class to handle a specific prefix
-    /// @param prefix = "mnn", "file", etc from mnn://xxxxx
+    /// @param prefix = "https", "file", etc from https://xxxxx
     /// @param handlerSaver Handler class object that can save the data
     void RegisterSaver( const std::string &prefix, FileSaver *handlerSaver );
 
     /**
          * Asynchronously load a file based on type
          * @param url - URL to load, will determine loader we use
-         * @param parse - Whether to parse file upon completion (for MNN)
+         * @param parse - Whether to parse file upon completion
          * @param save - Whether to save the file to local disk upon completion
          * @param ioc - ASIO context for async loading
          * @param callback - Filemanager callback on completion
