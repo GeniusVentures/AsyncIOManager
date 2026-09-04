@@ -7,9 +7,37 @@
 #include "testutil/temp_file.hpp"
 #include "testutil/asio_helpers.hpp"
 #include "testutil/test_fixture.hpp"
+#include <filesystem>
+#include <fstream>
+#include <string>
 
 class FileManagerIntegrationTest : public FileManagerTestFixture
 {
+};
+
+/// @brief RAII guard that swaps the process working directory for the duration
+///        of a scope and restores it on exit (survives ASSERT failures).
+///        LocalFileSaver writes its UUID directory relative to process CWD,
+///        so the test redirects CWD into a TempDir to keep the repo clean.
+struct CurrentPathGuard
+{
+    std::filesystem::path saved;
+
+    explicit CurrentPathGuard( const std::filesystem::path &target )
+    {
+        std::error_code ec;
+        saved = std::filesystem::current_path( ec );
+        std::filesystem::current_path( target, ec );
+    }
+
+    ~CurrentPathGuard()
+    {
+        std::error_code ec;
+        std::filesystem::current_path( saved, ec );
+    }
+
+    CurrentPathGuard( const CurrentPathGuard & )            = delete;
+    CurrentPathGuard &operator=( const CurrentPathGuard & ) = delete;
 };
 
 // ---------------------------------------------------------------------------
@@ -156,4 +184,63 @@ TEST_F( FileManagerIntegrationTest, SaveASync_FilePrefixDispatchesToLocalFileSav
     ASSERT_TRUE( ifs.is_open() ) << "File not found: " << fullPath;
     std::string readBack( ( std::istreambuf_iterator<char>( ifs ) ), std::istreambuf_iterator<char>() );
     EXPECT_EQ( readBack, content );
+}
+
+// ---------------------------------------------------------------------------
+// Auto-save chain (D-19): FileManager::LoadASync(save=true) → LocalFileSaver
+// ---------------------------------------------------------------------------
+
+TEST_F( FileManagerIntegrationTest, LoadASync_SaveTrueAutoSavesLoadedDataToDisk )
+{
+    const std::string expected = "auto-save chain content";
+    TempFile          tf( expected );   // absolute path under temp_directory_path — unaffected by CWD swap
+    TempDir           dir;              // becomes process CWD (LocalFileSaver writes <uuid>/ relative to CWD)
+    IOContextRunner   runner;
+    CurrentPathGuard  cwdGuard( dir.path() );
+
+    // finalcall deliberately empty: it fires at load completion, BEFORE the
+    // auto-save lands — it must NOT be the done-signal. Poll the filesystem.
+    FileManager::GetInstance().LoadASync(
+        "file://" + tf.pathString(), false, true, runner.ioc(), []( FileManager::ResultType ) {}, "file" );
+
+    const auto basename = tf.path().filename().string();
+    bool       ok       = pollUntil(
+              [&]()
+              {
+                  std::error_code ec;
+                  for ( auto &e : std::filesystem::directory_iterator( dir.path(), ec ) )
+                  {
+                      auto name = e.path().filename().string();
+                      if ( name.size() == 36 && std::count( name.begin(), name.end(), '-' ) == 4
+                           && std::filesystem::exists( e.path() / basename ) )
+                      {
+                          return true; // UUID subdir (36 chars, 4 dashes) containing the original filename
+                      }
+                  }
+                  return false;
+              },
+              std::chrono::seconds( 10 ) );
+    ASSERT_TRUE( ok ) << "auto-save UUID directory never appeared";
+
+    // Locate the UUID directory again and read the auto-saved bytes back.
+    std::filesystem::path savedFile;
+    {
+        std::error_code ec;
+        for ( auto &e : std::filesystem::directory_iterator( dir.path(), ec ) )
+        {
+            auto name = e.path().filename().string();
+            if ( name.size() == 36 && std::count( name.begin(), name.end(), '-' ) == 4
+                 && std::filesystem::exists( e.path() / basename ) )
+            {
+                savedFile = e.path() / basename;
+                break;
+            }
+        }
+    }
+    ASSERT_FALSE( savedFile.empty() ) << "UUID directory disappeared between poll and read-back";
+
+    std::ifstream ifs( savedFile, std::ios::binary );
+    ASSERT_TRUE( ifs.is_open() ) << "File not found: " << savedFile;
+    std::string readBack( ( std::istreambuf_iterator<char>( ifs ) ), std::istreambuf_iterator<char>() );
+    EXPECT_EQ( readBack, expected );
 }
