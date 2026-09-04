@@ -4,6 +4,7 @@
 //             output file://example_output/    (roundtrip lands in example_output/<basename>)
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include "FileManager.hpp"
 
@@ -17,7 +18,10 @@ int main( int argc, char **argv )
     auto ioc = std::make_shared<boost::asio::io_context>();
 
     // ---- Phase 1: load --------------------------------------------------
-    FileManager::ResultType loaded;
+    // NOTE: FileManager::ResultType (outcome::result<T>) has a deleted default
+    // constructor, so the result is captured via std::optional — assigned only on
+    // success; failure leaves it empty and reports through the callback.
+    std::optional<FileManager::ResultType> loaded;
     FileManager::GetInstance().LoadASync( inputUrl,
                                           false,
                                           ioc,
@@ -46,9 +50,9 @@ int main( int argc, char **argv )
     }
 
     // ---- Phase 2: save (restart clears the stopped flag — see D4) --------
-    FileManager::ResultType saved;
+    std::optional<FileManager::ResultType> saved;
     FileManager::GetInstance().SaveASync( saveUrl,
-                                          loaded,
+                                          loaded.value(),
                                           ioc,
                                           [&]( FileManager::ResultType result )
                                           {
