@@ -15,11 +15,6 @@ void FileManager::RegisterLoader( const std::string &prefix, FileLoader *handler
     loaders[prefix] = handlerLoader;
 }
 
-void FileManager::RegisterParser( const std::string &suffix, FileParser *handlerParser )
-{
-    parsers[suffix] = handlerParser;
-}
-
 void FileManager::RegisterSaver( const std::string &prefix, FileSaver *handlerSaver )
 {
     savers[prefix] = handlerSaver;
@@ -73,7 +68,14 @@ shared_ptr<void> FileManager::LoadASync( const std::string                      
                 auto handle_write = [this]( std::shared_ptr<boost::asio::io_context> ioc )
                 { DecrementOutstandingOperations( ioc ); };
                 auto saverIter = savers.find( savetype );
-                auto saver     = saverIter->second;
+                if ( saverIter == savers.end() )
+                {
+                    m_logger->error( "No saver registered for savetype: {}", savetype );
+                    DecrementOutstandingOperations( ioc );
+                    finalcall( outcome::failure( std::make_error_code( std::errc::operation_not_supported ) ) );
+                    return;
+                }
+                auto saver = saverIter->second;
                 saver->SaveASync( ioc, handle_write, "", buffers, suffix );
             }
             else
@@ -139,7 +141,7 @@ void FileManager::SaveASync( const std::string                       &url,
     }
 }
 
-shared_ptr<void> FileManager::LoadFile( const std::string &url, bool parse )
+shared_ptr<void> FileManager::LoadFile( const std::string &url )
 {
     std::string prefix;
     std::string filePath;
@@ -156,24 +158,7 @@ shared_ptr<void> FileManager::LoadFile( const std::string &url, bool parse )
     assert( dynamic_cast<FileLoader *>( loader ) );
 
     shared_ptr<void> data = loader->LoadFile( filePath );
-    if ( parse )
-    {
-        data = ParseData( suffix, data );
-    }
 
-    return data;
-}
-
-shared_ptr<void> FileManager::ParseData( const std::string &suffix, shared_ptr<void> data )
-{
-    auto parserIter = parsers.find( suffix );
-    if ( parserIter == parsers.end() )
-    {
-        throw std::range_error( "No parser registered for suffix " + suffix );
-    }
-
-    auto parser = dynamic_cast<FileParser *>( parserIter->second );
-    data        = parser->ParseData( data );
     return data;
 }
 
