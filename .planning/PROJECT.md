@@ -26,17 +26,17 @@ Reliable async load/save of data across local and remote protocols behind one UR
 - ✓ Remove parser layer: delete `FileParser` interface, `RegisterParser`, `ParseData`, parsers map from `FileManager` — Validated in Phase 3: parser-layer-removal
 - ✓ Strip `parse` bool from all loader/saver APIs and `CompletionCallback` signatures (`save` bool stays) — Validated in Phase 3: parser-layer-removal
 - ✓ Auto-save-after-load chain (`LoadASync(save=true)` → registered saver) proven by test — Validated in Phase 3: parser-layer-removal
+- ✓ Remove MNN dependency from build (`find_package(MNN)`, include dirs, link, example MNN libs glob, super-build MNN block, `cmake/common.cmake`, wrapper TESTAPP references) — Validated in Phase 4: build-purge-generic-example
+- ✓ Replace `.mnn` test assets with generic `test/fixture.bin` (~1KB) — Validated in Phase 4: build-purge-generic-example
+- ✓ Replace `MNNExample` with generic `FileExample` (`file://` load→save roundtrip, two-phase `run()/restart()/run()` io_context, committed `example/example_data.bin`) — Validated in Phase 4: build-purge-generic-example
 
 ### Active
 
 - [ ] Rename `MNNLoader`/`MNNSaver` → `LocalFileLoader`/`LocalFileSaver` (still dispatch on `file://`)
 - [ ] Rename `FILECommon` device layer → `LocalFileCommon` to match
 - [ ] Split `LocalFileCommon` into separate Windows and POSIX `.cpp` + `.hpp` files, selected in `src/CMakeLists.txt` (no `#ifdef _WIN32` in this layer)
-- [ ] Remove MNN dependency from build (`find_package(MNN)`, include dirs, link, example MNN libs glob)
 - [ ] Delete MNN-specific files: `include/MNNCommon.hpp`, `include/MNNLoader.hpp`, `include/MNNSaver.hpp`, `src/MNNLoader.cpp`, `src/MNNSaver.cpp`, `test/base_mnn_test.hpp`
-- [ ] Replace `.mnn` test assets (`test/1.mnn`, `test/2.mnn`) with generic binary test fixtures
 - [ ] Remove `mnn://` save prefix registration; `file://` remains the local save prefix
-- [ ] Replace `MNNExample` with a generic file:// load/save example
 - [ ] Rename/rewrite affected tests (`mnn_loader_test`, `mnn_saver_test`, `filemanager_test` references) and keep suite green
 - [ ] Scrub MNN references from doc comments across headers/sources
 
