@@ -25,10 +25,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Platform Split
 
-- [ ] **PLAT-01**: Local-file device implementation exists as separate Windows source+header (e.g. `LocalFileCommon.win.cpp` / `LocalFileCommon.win.hpp`) with zero `#ifdef`
-- [ ] **PLAT-02**: Local-file device implementation exists as separate POSIX source+header (e.g. `LocalFileCommon.posix.cpp` / `LocalFileCommon.posix.hpp`) with zero `#ifdef`
-- [ ] **PLAT-03**: `src/CMakeLists.txt` selects the platform pair via `if(WIN32)/elseif(UNIX)` — no platform branching inside source files
-- [ ] **PLAT-04**: Shared/common declarations (if any remain) live in a platform-neutral header without `#ifdef _WIN32`
+- [x] **PLAT-01**: Local-file device implementation exists as separate Windows source+header (e.g. `LocalFileCommon.win.cpp` / `LocalFileCommon.win.hpp`) with zero `#ifdef`
+- [x] **PLAT-02**: Local-file device implementation exists as separate POSIX source+header (e.g. `LocalFileCommon.posix.cpp` / `LocalFileCommon.posix.hpp`) with zero `#ifdef`
+- [x] **PLAT-03**: `src/CMakeLists.txt` selects the platform pair via `if(WIN32)/elseif(UNIX)` — no platform branching inside source files
+- [x] **PLAT-04**: Shared/common declarations (if any remain) live in a platform-neutral header without `#ifdef _WIN32`
 
 ### Parser Layer Removal
 
@@ -90,10 +90,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FILE-02 | Phase 1 | Pending |
 | FILE-03 | Phase 1 | Pending |
 | FILE-04 | Phase 1 | Pending |
-| PLAT-01 | Phase 2 | Pending |
-| PLAT-02 | Phase 2 | Pending |
-| PLAT-03 | Phase 2 | Pending |
-| PLAT-04 | Phase 2 | Pending |
+| PLAT-01 | Phase 2 | Complete |
+| PLAT-02 | Phase 2 | Complete |
+| PLAT-03 | Phase 2 | Complete |
+| PLAT-04 | Phase 2 | Complete |
 | PARSE-01 | Phase 3 | Pending |
 | PARSE-02 | Phase 3 | Pending |
 | PARSE-03 | Phase 3 | Pending |
@@ -106,6 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUILD-02 | Phase 5 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 24 total
 - Mapped to phases: 24/24 ✓
 - Unmapped: 0

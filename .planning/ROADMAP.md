@@ -155,7 +155,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. LocalFile Rename & MNN Code Purge | 0/? | Not started | - |
-| 2. LocalFileCommon Platform Split | 2/2 | Complete   | 2026-09-04 |
+| 2. LocalFileCommon Platform Split | 2/2 | Complete    | 2026-09-04 |
 | 3. Parser Layer Removal | 0/? | Not started | - |
 | 4. Build Purge & Generic Example | 0/? | Not started | - |
 | 5. Zero-MNN Verification & Green Suite | 0/? | Not started | - |
