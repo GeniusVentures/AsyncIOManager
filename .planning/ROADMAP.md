@@ -87,12 +87,12 @@ Plans:
   4. No behavioral change to load/save paths beyond signature cleanup — callbacks still receive `ioc`, `ResultType`, `save`
   5. Windows build + full test suite green after the signature change
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — PARSE-01 registry deletion (FileParser.hpp, RegisterParser/ParseData/parsers, LoadFile 1-arg) + D-20 savers.find UB guard + D-19 auto-save chain test — independently green
+- [x] 03-01-PLAN.md — PARSE-01 registry deletion (FileParser.hpp, RegisterParser/ParseData/parsers, LoadFile 1-arg) + D-20 savers.find UB guard + D-19 auto-save chain test — independently green
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -165,7 +165,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. LocalFile Rename & MNN Code Purge | 0/? | Not started | - |
 | 2. LocalFileCommon Platform Split | 2/2 | Complete    | 2026-09-04 |
-| 3. Parser Layer Removal | 0/? | Not started | - |
+| 3. Parser Layer Removal | 1/2 | In Progress|  |
 | 4. Build Purge & Generic Example | 0/? | Not started | - |
 | 5. Zero-MNN Verification & Green Suite | 0/? | Not started | - |
 
