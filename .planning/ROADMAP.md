@@ -16,7 +16,7 @@ total_phases: 5
 ## Phases
 
 - [ ] **Phase 1: LocalFile Rename & MNN Code Purge** - `MNNLoader`/`MNNSaver`/`FILECommon` become `LocalFileLoader`/`LocalFileSaver`/`LocalFileCommon`, MNN code files deleted, `mnn://` prefix removed, tests renamed in-phase
-- [ ] **Phase 2: LocalFileCommon Platform Split** - Local-file device split into Windows/POSIX file pairs selected by CMake, zero `#ifdef`
+- [x] **Phase 2: LocalFileCommon Platform Split** - Local-file device split into Windows/POSIX file pairs selected by CMake, zero `#ifdef` (completed 2026-09-04)
 - [ ] **Phase 3: Parser Layer Removal** - `parse` bool stripped from every API and callback; `FileParser` deleted; `save`-driven auto-save preserved
 - [ ] **Phase 4: Build Purge & Generic Example** - MNN removed from all CMake; `MNNExample` replaced by generic `file://` example; `.mnn` fixtures become generic binaries
 - [ ] **Phase 5: Zero-MNN Verification & Green Suite** - Acceptance gate: zero-MNN grep, full suite green on Windows, clean-tree end-to-end build
@@ -62,7 +62,7 @@ Plans:
   4. Any shared declarations live in a platform-neutral header with no `#ifdef _WIN32`
   5. Windows build + full test suite remain green after the split
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 **Wave 1**
@@ -71,7 +71,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Permanent zero-#ifdef guard (`no_ifdef_test` via `addtest()`, D-17/D-18) + phase-end grep gate + full-suite verification + optional WSL POSIX syntax stretch
+- [x] 02-02-PLAN.md — Permanent zero-#ifdef guard (`no_ifdef_test` via `addtest()`, D-17/D-18) + phase-end grep gate + full-suite verification + optional WSL POSIX syntax stretch
 
 ### Phase 3: Parser Layer Removal
 
@@ -155,7 +155,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. LocalFile Rename & MNN Code Purge | 0/? | Not started | - |
-| 2. LocalFileCommon Platform Split | 1/2 | In Progress|  |
+| 2. LocalFileCommon Platform Split | 2/2 | Complete   | 2026-09-04 |
 | 3. Parser Layer Removal | 0/? | Not started | - |
 | 4. Build Purge & Generic Example | 0/? | Not started | - |
 | 5. Zero-MNN Verification & Green Suite | 0/? | Not started | - |
