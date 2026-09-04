@@ -1,5 +1,15 @@
+# Platform selection for the local-file device layer (PLAT-03):
+# CMake is the ONLY selection mechanism — zero platform branching in sources.
+if(WIN32)
+    set(ASIOMGR_LOCALFILE_SOURCE LocalFileCommon.win.cpp)
+    set(ASIOMGR_LOCALFILE_HEADER_NAME "LocalFileCommon.win.hpp")
+elseif(UNIX)
+    set(ASIOMGR_LOCALFILE_SOURCE LocalFileCommon.posix.cpp)
+    set(ASIOMGR_LOCALFILE_HEADER_NAME "LocalFileCommon.posix.hpp")
+endif()
+
 add_library(AsyncIOManager STATIC
-    LocalFileCommon.cpp
+    ${ASIOMGR_LOCALFILE_SOURCE}
     FileManager.cpp
     HTTPCommon.cpp
     HTTPLoader.cpp
@@ -45,6 +55,13 @@ target_link_libraries(AsyncIOManager
     ipfs-bitswap-proto
     ipfs-unixfs-proto
     ipfs-bitswap-cpp
+)
+
+# Header token WITH literal quotes — the umbrella's `#include ASIOMGR_LOCALFILE_HEADER`
+# expands to #include "LocalFileCommon.win.hpp" on this platform. PRIVATE (D-10):
+# the only TUs including the umbrella are library sources.
+target_compile_definitions(AsyncIOManager PRIVATE
+    ASIOMGR_LOCALFILE_HEADER="${ASIOMGR_LOCALFILE_HEADER_NAME}"
 )
 include_directories(../include)
 
