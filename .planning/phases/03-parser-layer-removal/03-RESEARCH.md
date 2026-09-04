@@ -369,7 +369,9 @@ Not applicable — no external ecosystem movement (private refactor, zero new de
 
 No other assumptions — all structural claims carry direct tool verification from this session.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> **RESOLVED 2026-09-04:** Question 1 is adopted — resolved by 03-02 Task 2 step (2), which adds the `@param parse` doc-grep to the phase-end gate (safe tightening, zero legit survivors).
 
 1. **Should the D-23 gate add a doc-scrub pattern (`param parse`)?**
    - What we know: ~15 `@param parse` doc lines exist; none match the current pattern list; a missed scrub is invisible to the gate.
