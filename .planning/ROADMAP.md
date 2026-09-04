@@ -62,12 +62,12 @@ Plans:
   4. Any shared declarations live in a platform-neutral header with no `#ifdef _WIN32`
   5. Windows build + full test suite remain green after the split
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Platform-split transaction: win/posix pairs (verbatim move + D-12/D-13 POSIX fixes), neutral umbrella (D-15), CMake `if(WIN32)/elseif(UNIX)` selection + `ASIOMGR_LOCALFILE_HEADER` define (D-10), green-build gate
+- [x] 02-01-PLAN.md — Platform-split transaction: win/posix pairs (verbatim move + D-12/D-13 POSIX fixes), neutral umbrella (D-15), CMake `if(WIN32)/elseif(UNIX)` selection + `ASIOMGR_LOCALFILE_HEADER` define (D-10), green-build gate
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -155,7 +155,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. LocalFile Rename & MNN Code Purge | 0/? | Not started | - |
-| 2. LocalFileCommon Platform Split | 0/? | Not started | - |
+| 2. LocalFileCommon Platform Split | 1/2 | In Progress|  |
 | 3. Parser Layer Removal | 0/? | Not started | - |
 | 4. Build Purge & Generic Example | 0/? | Not started | - |
 | 5. Zero-MNN Verification & Green Suite | 0/? | Not started | - |
