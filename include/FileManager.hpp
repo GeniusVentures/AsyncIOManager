@@ -35,7 +35,7 @@ namespace outcome
     using libp2p::outcome::success;
 }
 
-/// \brief FileManager class handles all the registration of the file loaders, parsers and savers and proxies the basic
+/// \brief FileManager class handles all the registration of the file loaders and savers and proxies the basic
 ///         functionality to the registered handlers
 class FileManager
 {
@@ -61,11 +61,10 @@ public:
          * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
          * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
          * @param buffers - Contains path/data loaded
-         * @param parse - Whether to parse file upon completion
          * @param save - Whether to save the file to local disk upon completion
          */
     using CompletionCallback =
-        std::function<void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save )>;
+        std::function<void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool save )>;
 
     /**
          * Final callback returns data to application
@@ -91,7 +90,6 @@ public:
     /**
          * Asynchronously load a file based on type
          * @param url - URL to load, will determine loader we use
-         * @param parse - Whether to parse file upon completion
          * @param save - Whether to save the file to local disk upon completion
          * @param ioc - ASIO context for async loading
          * @param callback - Filemanager callback on completion
@@ -99,7 +97,6 @@ public:
          * @return String indicating init
          */
     shared_ptr<void> LoadASync( const std::string                       &url,
-                                bool                                     parse,
                                 bool                                     save,
                                 std::shared_ptr<boost::asio::io_context> ioc,
                                 FinalCallback                            finalcall,

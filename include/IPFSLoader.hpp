@@ -53,11 +53,10 @@ namespace sgns
          * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
          * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
          * @param buffers - Contains path/data loaded
-         * @param parse - Whether to parse file upon completion
          * @param save - Whether to save the file to local disk upon completion
          */
         using CompletionCallback = std::function<
-            void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save )>;
+            void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool save )>;
 
         /**
          * Load data from the file
@@ -69,7 +68,6 @@ namespace sgns
         /**
          * Asynchronously load a file
          * @param filename - Filename to load
-         * @param parse - Whether to parse file upon completion
          * @param save - Whether to save the file to local disk upon completion
          * @param ioc - ASIO context for async loading
          * @param callback - Filemanager callback on completion
@@ -77,7 +75,6 @@ namespace sgns
          * @return String indicating init
          */
         std::shared_ptr<void> LoadASync( std::string                              filename,
-                                         bool                                     parse,
                                          bool                                     save,
                                          std::shared_ptr<boost::asio::io_context> ioc,
                                          CompletionCallback                       callback ) override;

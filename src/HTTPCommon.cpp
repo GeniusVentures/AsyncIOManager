@@ -71,12 +71,11 @@ namespace sgns
 
     bool HTTPDevice::s_verify_peer = true;
 
-    HTTPDevice::HTTPDevice( std::string http_host, std::string http_path, std::string http_port, bool parse, bool save )
+    HTTPDevice::HTTPDevice( std::string http_host, std::string http_path, std::string http_port, bool save )
     {
         http_host_ = http_host;
         http_path_ = http_path;
         http_port_ = http_port;
-        parse_     = parse;
         save_      = save;
     }
 
@@ -97,7 +96,7 @@ namespace sgns
             m_logger->error( "Error resolving address: {}", e.what() );
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false ); } );
             return;
         }
         catch ( const std::exception &e )
@@ -105,7 +104,7 @@ namespace sgns
             m_logger->error( "Error resolving address: {}", e.what() );
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false ); } );
             return;
         }
         catch ( ... )
@@ -113,7 +112,7 @@ namespace sgns
             m_logger->error( "Error resolving address: Unknown" );
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false ); } );
             return;
         }
 
@@ -169,7 +168,6 @@ namespace sgns
                                     ioc,
                                     outcome::failure( handshake_deadline.expired->load() ? Error::TIMEOUT
                                                                                          : Error::HANDSHAKE_ERROR ),
-                                    false,
                                     false );
                             }
                         } );
@@ -180,7 +178,6 @@ namespace sgns
                     handle_read(
                         ioc,
                         outcome::failure( connect_deadline.expired->load() ? Error::TIMEOUT : Error::CONNECT_ERROR ),
-                        false,
                         false );
                 }
             } );
@@ -223,7 +220,6 @@ namespace sgns
                                 handle_read( ioc,
                                              outcome::failure( read_deadline.expired->load() ? Error::TIMEOUT
                                                                                              : Error::CON_INTERRUPT ),
-                                             false,
                                              false );
                                 return;
                             }
@@ -247,12 +243,12 @@ namespace sgns
                                 std::filesystem::path p( self->http_path_ );
                                 finaldata->first.push_back( p.filename().string() );
                                 finaldata->second.emplace_back( buffer->begin() + headerEnd + 4, buffer->end() );
-                                handle_read( ioc, finaldata, self->parse_, self->save_ );
+                                handle_read( ioc, finaldata, self->save_ );
                             }
                             else
                             {
                                 self->m_logger->error( "Error, no header in http" );
-                                handle_read( ioc, outcome::failure( Error::NO_HEADER ), false, false );
+                                handle_read( ioc, outcome::failure( Error::NO_HEADER ), false );
                             }
                         } );
                 }
@@ -262,7 +258,6 @@ namespace sgns
                     self->m_logger->error( "Error in async_write: {}", write_error.message() );
                     handle_read( ioc,
                                  outcome::failure( read_deadline.expired->load() ? Error::TIMEOUT : Error::REQ_FAILED ),
-                                 false,
                                  false );
                 }
             } );

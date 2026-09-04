@@ -36,7 +36,6 @@ namespace sgns
     }
 
     std::shared_ptr<void> SFTPLoader::LoadASync( std::string                              filename,
-                                                 bool                                     parse,
                                                  bool                                     save,
                                                  std::shared_ptr<boost::asio::io_context> ioc,
                                                  CompletionCallback                       handle_read,
@@ -74,7 +73,6 @@ namespace sgns
                                                         sftp_pubkeyfile,
                                                         sftp_privkeyfile,
                                                         sftp_privkeypass,
-                                                        parse,
                                                         save );
         sftpDevice->StartSFTPDownload( ioc, tcpSocket, session, handle_read, status );
 

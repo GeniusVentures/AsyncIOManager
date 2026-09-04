@@ -45,7 +45,6 @@ namespace sgns
     }
 
     std::shared_ptr<void> WSLoader::LoadASync( std::string                              filename,
-                                               bool                                     parse,
                                                bool                                     save,
                                                std::shared_ptr<boost::asio::io_context> ioc,
                                                CompletionCallback                       handle_read )
@@ -59,11 +58,11 @@ namespace sgns
         {
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::INVALID_URL ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::INVALID_URL ), false ); } );
             return result;
         }
 
-        auto httpDevice = std::make_shared<WSDevice>( ws_host, ws_path, ws_port, parse, save );
+        auto httpDevice = std::make_shared<WSDevice>( ws_host, ws_path, ws_port, save );
         httpDevice->StartWSDownload( ioc, handle_read );
         return result;
     }

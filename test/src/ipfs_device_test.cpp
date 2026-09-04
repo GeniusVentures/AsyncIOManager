@@ -76,13 +76,13 @@ TEST_F( IPFSDeviceRetryTest, RetryTimerKeepsDeviceAlive )
     // shared_ptr so the completion callback has no dangling by-ref capture
     auto                      fired = std::make_shared<bool>( false );
     IPFSDevice::CompletionCallback callback =
-        [fired]( std::shared_ptr<boost::asio::io_context>, IPFSDevice::ResultType, bool, bool )
+        [fired]( std::shared_ptr<boost::asio::io_context>, IPFSDevice::ResultType, bool )
         {
             *fired = true;
         };
 
     // Arm the 10s retry timer, then drop the last EXTERNAL reference (the UAF window)
-    device->StartFindingPeersWithRetry( runner.ioc(), cid, "uaf_probe.bin", 0, false, false, callback );
+    device->StartFindingPeersWithRetry( runner.ioc(), cid, "uaf_probe.bin", 0, false, callback );
     std::weak_ptr<IPFSDevice> watch = device;
     device.reset();
 
@@ -110,7 +110,7 @@ TEST_F( IPFSDeviceRetryTest, RetryChainCompletesAfterReferenceDropped )
     auto                      fired      = std::make_shared<bool>( false );
     auto                      gotFailure = std::make_shared<bool>( false );
     IPFSDevice::CompletionCallback callback =
-        [fired, gotFailure]( std::shared_ptr<boost::asio::io_context>, IPFSDevice::ResultType result, bool, bool )
+        [fired, gotFailure]( std::shared_ptr<boost::asio::io_context>, IPFSDevice::ResultType result, bool )
         {
             *fired = true;
             if ( !result.has_value() )
@@ -120,7 +120,7 @@ TEST_F( IPFSDeviceRetryTest, RetryChainCompletesAfterReferenceDropped )
         };
 
     // Arm FIRST, then drop the strong reference before the timer fires.
-    device->StartFindingPeersWithRetry( runner.ioc(), cid, "uaf_probe.bin", 0, false, false, callback );
+    device->StartFindingPeersWithRetry( runner.ioc(), cid, "uaf_probe.bin", 0, false, callback );
     std::weak_ptr<IPFSDevice> watch = device;
     device.reset();
 
@@ -174,14 +174,14 @@ TEST_F( IPFSDeviceRetryTest, FindProvidersCallbackKeepsDeviceAlive )
 
     auto                      fired = std::make_shared<bool>( false );
     IPFSDevice::CompletionCallback callback =
-        [fired]( std::shared_ptr<boost::asio::io_context>, IPFSDevice::ResultType, bool, bool )
+        [fired]( std::shared_ptr<boost::asio::io_context>, IPFSDevice::ResultType, bool )
         {
             *fired = true;
         };
 
     // Start the provider query, then drop the last EXTERNAL reference while
     // the FindProviders query is in flight (the UAF window).
-    device->StartFindingPeers( runner.ioc(), cid, "dht_probe.bin", 0, false, false, callback );
+    device->StartFindingPeers( runner.ioc(), cid, "dht_probe.bin", 0, false, callback );
     std::weak_ptr<IPFSDevice> watch = device;
     device.reset();
 

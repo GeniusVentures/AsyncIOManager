@@ -54,7 +54,6 @@ TEST_F( LocalFileLoaderTest, LoadASync_ReadsExistingFile )
 
     FileManager::GetInstance().LoadASync(
         "file://" + tf.pathString(),
-        false,       // parse
         false,       // save
         runner.ioc(),
         [&]( FileManager::ResultType result )
@@ -89,7 +88,7 @@ TEST_F( LocalFileLoaderTest, LoadASync_NonexistentFileReturnsError )
 
     FileManager::GetInstance().LoadASync(
         "file:///nonexistent/path/xyz.abc",
-        false, false, runner.ioc(),
+        false, runner.ioc(),
         [&]( FileManager::ResultType result )
         {
             received  = std::move( result );

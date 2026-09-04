@@ -22,11 +22,10 @@ public:
      * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
      * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
      * @param buffers - Contains path/data loaded
-     * @param parse - Whether to parse file upon completion
      * @param save - Whether to save the file to local disk upon completion
      */
     using CompletionCallback =
-        std::function<void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save )>;
+        std::function<void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool save )>;
 
     /// @brief virtual destructor to prevent memory leaks from derived classes
     virtual ~FileLoader() {}
@@ -38,7 +37,6 @@ public:
     /**
      * Asynchronously load a file based on type
      * @param url - URL to load, will determine loader we use
-     * @param parse - Whether to parse file upon completion
      * @param save - Whether to save the file to local disk upon completion
      * @param ioc - ASIO context for async loading
      * @param callback - Filemanager callback on completion
@@ -46,7 +44,6 @@ public:
      * @return String indicating init
      */
     virtual std::shared_ptr<void> LoadASync( std::string                              filename,
-                                             bool                                     parse,
                                              bool                                     save,
                                              std::shared_ptr<boost::asio::io_context> ioc,
                                              CompletionCallback                       callback ) = 0;

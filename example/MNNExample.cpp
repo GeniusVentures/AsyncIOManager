@@ -266,8 +266,7 @@ groups:
 
         FileManager::GetInstance().LoadASync(
             file_names[i],
-            false, // don't parse
-            true,  // don't save - just load
+            true,  // save
             ioc,
             [file_name = file_names[i]]( auto buffers )
             {

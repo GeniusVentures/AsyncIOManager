@@ -14,7 +14,6 @@ namespace sgns
                             std::string sftp_pubkeyfile,
                             std::string sftp_privkeyfile,
                             std::string sftp_privkeypass,
-                            bool        parse,
                             bool        save )
     {
         sftp_host_        = sftp_host;
@@ -24,7 +23,6 @@ namespace sgns
         sftp_pubkeyfile_  = sftp_pubkeyfile;
         sftp_privkeyfile_ = sftp_privkeyfile;
         sftp_privkeypass_ = sftp_privkeypass;
-        parse_            = parse;
         save_             = save;
     }
 
@@ -86,7 +84,6 @@ namespace sgns
                     status( CustomResult( sgns::AsyncError::outcome::failure( "SFTP Connection Error" ) ) );
                     handle_read( ioc,
                                  std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                                 false,
                                  false );
                 }
             } );
@@ -126,7 +123,6 @@ namespace sgns
                         handle_read(
                             ioc,
                             std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                            false,
                             false );
                     }
                 } );
@@ -136,7 +132,6 @@ namespace sgns
             status( CustomResult( sgns::AsyncError::outcome::failure( "SFTP Handshake Error" ) ) );
             handle_read( ioc,
                          std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                         false,
                          false );
         }
     }
@@ -198,7 +193,6 @@ namespace sgns
                         handle_read(
                             ioc,
                             std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                            false,
                             false );
                     }
                 } );
@@ -208,7 +202,6 @@ namespace sgns
             status( CustomResult( sgns::AsyncError::outcome::failure( "SFTP Fail, authentication fail" ) ) );
             handle_read( ioc,
                          std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                         false,
                          false );
         }
     }
@@ -241,7 +234,6 @@ namespace sgns
                             handle_read(
                                 ioc,
                                 std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                                false,
                                 false );
                         }
                     } );
@@ -251,7 +243,6 @@ namespace sgns
                 status( CustomResult( sgns::AsyncError::outcome::failure( "SFTP Create Error" ) ) );
                 handle_read( ioc,
                              std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                             false,
                              false );
             }
         }
@@ -293,7 +284,6 @@ namespace sgns
                             handle_read(
                                 ioc,
                                 std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                                false,
                                 false );
                         }
                     } );
@@ -303,7 +293,6 @@ namespace sgns
                 status( CustomResult( sgns::AsyncError::outcome::failure( "SFTP Open Error" ) ) );
                 handle_read( ioc,
                              std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                             false,
                              false );
             }
         }
@@ -353,7 +342,6 @@ namespace sgns
                         handle_read(
                             ioc,
                             std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                            false,
                             false );
                     }
                 } );
@@ -363,7 +351,6 @@ namespace sgns
             status( CustomResult( sgns::AsyncError::outcome::failure( "SFTP File Size does not match" ) ) );
             handle_read( ioc,
                          std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                         false,
                          false );
         }
     }
@@ -389,7 +376,7 @@ namespace sgns
             // Process data if available
             if ( totalBytesRead >= buffer->size() )
             {
-                //We've read all the data, send to parse/save
+                //We've read all the data, send to save
                 std::cout << "SFTP Finish" << std::endl;
                 status( CustomResult( sgns::AsyncError::outcome::success( Success{ "SFTP Read Finished" } ) ) );
                 auto finaldata =
@@ -397,7 +384,7 @@ namespace sgns
                 std::filesystem::path p( sftp_path_ );
                 finaldata->first.push_back( p.filename().string() );
                 finaldata->second.push_back( *buffer );
-                handle_read( ioc, finaldata, parse_, save_ );
+                handle_read( ioc, finaldata, save_ );
             }
             else
             {
@@ -437,7 +424,6 @@ namespace sgns
                             handle_read(
                                 ioc,
                                 std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                                false,
                                 false );
                         }
                     } );
@@ -481,7 +467,6 @@ namespace sgns
                         handle_read(
                             ioc,
                             std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                            false,
                             false );
                     }
                 } );
@@ -493,7 +478,6 @@ namespace sgns
             StartSFTPCleanup( sftp2session, sftpHandle, sftp );
             handle_read( ioc,
                          std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>(),
-                         false,
                          false );
         }
     }

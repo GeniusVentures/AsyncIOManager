@@ -63,11 +63,10 @@ namespace sgns
 		 * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
 		 * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
 		 * @param buffers - Contains path/data loaded
-		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
         using CompletionCallback = std::function<
-            void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool parse, bool save )>;
+            void( std::shared_ptr<boost::asio::io_context> ioc, ResultType buffers, bool save )>;
 
         /**
 		 * Create an IPFS Singlelton Device and return instance
@@ -109,7 +108,6 @@ namespace sgns
 		 * @param cid - IPFS Main CID to get from bitswap
 		 * @param filename - Filename for file, mostly for use if this is a single file.
 		 * @param addressoffset - Offset from list of addresses to use, usually want to call 0 on this as it will loop through from starting point if needed
-		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 * @param handle_read - Filemanager callback on completion
 		 * @param status - Status function that will be updated with status codes as operation progresses
@@ -118,14 +116,12 @@ namespace sgns
                                 const sgns::ipfs_bitswap::CID           &cid,
                                 std::string                              filename,
                                 int                                      addressoffset,
-                                bool                                     parse,
                                 bool                                     save,
                                 CompletionCallback                       handle_read );
         void StartFindingPeersWithRetry( std::shared_ptr<boost::asio::io_context> ioc,
                                          const sgns::ipfs_bitswap::CID           &cid,
                                          std::string                              filename,
                                          int                                      addressoffset,
-                                         bool                                     parse,
                                          bool                                     save,
                                          CompletionCallback                       handle_read );
         /**
@@ -134,7 +130,6 @@ namespace sgns
 		 * @param cid - IPFS Main CID to get from bitswap
 		 * @param filename - Filename for file, mostly for use if this is a single file.
 		 * @param addressoffset - Offset from list of addresses to use, usually want to call 0 on this as it will loop through from starting point if needed
-		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 * @param handle_read - Filemanager callback on completion
 		 * @param status - Status function that will be updated with status codes as operation progresses
@@ -143,7 +138,6 @@ namespace sgns
                                const sgns::ipfs_bitswap::CID           &cid,
                                std::string                              filename,
                                int                                      addressoffset,
-                               bool                                     parse,
                                bool                                     save,
                                CompletionCallback                       handle_read );
 
@@ -168,14 +162,12 @@ namespace sgns
 		 * @param ioc - Asio io context
 		 * @param unixfsContent - UnixFS content from bitswap RequestContent
 		 * @param filename - Base filename for result
-		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 * @param handle_read - Completion callback
 		 */
         void convertUnixFSContentToResult( std::shared_ptr<boost::asio::io_context> ioc,
                                            const sgns::ipfs_bitswap::UnixFSContent &unixfsContent,
                                            const std::string                       &filename,
-                                           bool                                     parse,
                                            bool                                     save,
                                            CompletionCallback                       handle_read );
 

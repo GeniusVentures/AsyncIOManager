@@ -36,13 +36,11 @@ namespace sgns
 		 * Completion callback template. We expect an io_context so the thread can be shut down if no outstanding async loads exist, and a buffer with the read information
 		 * @param ioc - asio io context so we can stop this if no outstanding async tasks remain
 		 * @param buffers - Contains path/data loaded
-		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
         using CompletionCallback = std::function<void(
             std::shared_ptr<boost::asio::io_context>                                             ioc,
             std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers,
-            bool                                                                                 parse,
             bool                                                                                 save )>;
         /**
 		 * Status callback returns an error code as an async load proceeds
@@ -61,7 +59,6 @@ namespace sgns
 		 * @param sftp_Privkeypass - Private key pass for logging in
 		 * @param callback - Filemanager callback on completion
 		 * @param status - Status function that will be updated with status codes as operation progresses
-		 * @param parse - Whether to parse file upon completion
 		 * @param save - Whether to save the file to local disk upon completion
 		 */
         SFTPDevice( std::string sftp_host,
@@ -71,7 +68,6 @@ namespace sgns
                     std::string sftp_pubkeyfile,
                     std::string sftp_privkeyfile,
                     std::string sftp_privkeypass,
-                    bool        parse,
                     bool        save );
 
         ~SFTPDevice()
@@ -204,7 +200,6 @@ namespace sgns
         std::string sftp_pubkeyfile_;
         std::string sftp_privkeyfile_;
         std::string sftp_privkeypass_;
-        bool        parse_;
         bool        save_;
         bool        downloading_ = false;
     };

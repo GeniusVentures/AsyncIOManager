@@ -92,7 +92,6 @@ namespace sgns
       )" );
 
     std::shared_ptr<void> IPFSLoader::LoadASync( std::string                              filename,
-                                                 bool                                     parse,
                                                  bool                                     save,
                                                  std::shared_ptr<boost::asio::io_context> ioc,
                                                  CompletionCallback                       handle_read )
@@ -118,7 +117,7 @@ namespace sgns
         {
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::INVALID_URL ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::INVALID_URL ), false ); } );
             return result;
         }
 
@@ -135,7 +134,7 @@ namespace sgns
                 m_logger->error( "Bad CID: {}", maybe_cid.error().message() );
                 boost::asio::post( *ioc,
                                    [handle_read, ioc]()
-                                   { handle_read( ioc, outcome::failure( Error::BAD_CID ), false, false ); } );
+                                   { handle_read( ioc, outcome::failure( Error::BAD_CID ), false ); } );
                 return result;
             }
             auto cid = maybe_cid.value();
@@ -149,7 +148,7 @@ namespace sgns
                                  ipfsDeviceResult.error().message() );
                 boost::asio::post( *ioc,
                                    [handle_read, ioc]()
-                                   { handle_read( ioc, outcome::failure( Error::CANNOT_LISTEN ), false, false ); } );
+                                   { handle_read( ioc, outcome::failure( Error::CANNOT_LISTEN ), false ); } );
                 return result;
             }
             auto ipfsDevice = ipfsDeviceResult.value();
@@ -159,12 +158,12 @@ namespace sgns
                 // DHT available - discover providers for this CID before requesting the block
                 m_logger->info( "External DHT available, finding providers for CID" );
                 ioc->post(
-                    [=] { ipfsDevice->StartFindingPeers( ioc, cid, ipfs_file, 0, parse, save, handle_read ); } );
+                    [=] { ipfsDevice->StartFindingPeers( ioc, cid, ipfs_file, 0, save, handle_read ); } );
             }
             else
             {
                 // Use the device to request the block
-                ioc->post( [=] { ipfsDevice->RequestBlockMain( ioc, cid, ipfs_file, 0, parse, save, handle_read ); } );
+                ioc->post( [=] { ipfsDevice->RequestBlockMain( ioc, cid, ipfs_file, 0, save, handle_read ); } );
             }
 
             return result;
@@ -181,7 +180,7 @@ namespace sgns
             m_logger->error( "Cannot listen to address: {}", ipfsDeviceResult.error().message() );
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::CANNOT_LISTEN ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::CANNOT_LISTEN ), false ); } );
             return result;
         }
         auto ipfsDevice = ipfsDeviceResult.value();
@@ -195,7 +194,7 @@ namespace sgns
             m_logger->error( "Bad CID: {}", maybe_cid.error().message() );
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::BAD_CID ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::BAD_CID ), false ); } );
             return result;
         }
         auto cid = maybe_cid.value();
@@ -209,8 +208,8 @@ namespace sgns
         ioc->post(
             [=]
             {
-                //ipfsDevice->RequestBlockMain( ioc, cid, ipfs_file, 0, parse, save, handle_read );
-                ipfsDevice->StartFindingPeers(ioc, cid, ipfs_file, 0, parse, save, handle_read);
+                //ipfsDevice->RequestBlockMain( ioc, cid, ipfs_file, 0, save, handle_read );
+                ipfsDevice->StartFindingPeers(ioc, cid, ipfs_file, 0, save, handle_read);
             } );
 
         return result;

@@ -35,7 +35,6 @@ void FileManager::InitializeSingletons()
 }
 
 shared_ptr<void> FileManager::LoadASync( const std::string                       &url,
-                                         bool                                     parse,
                                          bool                                     save,
                                          std::shared_ptr<boost::asio::io_context> ioc,
                                          FinalCallback                            finalcall,
@@ -57,7 +56,6 @@ shared_ptr<void> FileManager::LoadASync( const std::string                      
     //Create a handler
     auto handle_read = [this, savetype, suffix, finalcall]( std::shared_ptr<boost::asio::io_context> ioc,
                                                             ResultType                               buffers,
-                                                            bool                                     parse,
                                                             bool                                     save )
     {
         if ( buffers )
@@ -93,7 +91,7 @@ shared_ptr<void> FileManager::LoadASync( const std::string                      
     auto loader = loaderIter->second;
     // double check pointer is to a FileLoader class
     assert( dynamic_cast<FileLoader *>( loader ) );
-    shared_ptr<void> data = loader->LoadASync( filePath, parse, save, ioc, handle_read );
+    shared_ptr<void> data = loader->LoadASync( filePath, save, ioc, handle_read );
     return data;
 }
 

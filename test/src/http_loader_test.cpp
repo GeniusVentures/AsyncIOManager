@@ -183,7 +183,7 @@ TEST_F( HTTPLoaderTest, LoadASync_DownloadsOverHttps )
 
     FileManager::GetInstance().LoadASync(
         url,
-        false, false, runner.ioc(),
+        false, runner.ioc(),
         [&]( FileManager::ResultType result )
         {
             received  = std::move( result );
@@ -219,7 +219,7 @@ TEST_F( HTTPLoaderTest, LoadASync_InvalidUrlReturnsError )
     // Empty URL should fail URL parsing
     FileManager::GetInstance().LoadASync(
         "https://",  // no host/path
-        false, false, runner.ioc(),
+        false, runner.ioc(),
         [&]( FileManager::ResultType result )
         {
             received  = std::move( result );
@@ -244,7 +244,7 @@ TEST_F( HTTPLoaderTest, LoadASync_ConnectionRefusedReturnsError )
     // Port 1 is typically closed
     FileManager::GetInstance().LoadASync(
         "https://127.0.0.1:1/test/data.bin",
-        false, false, runner.ioc(),
+        false, runner.ioc(),
         [&]( FileManager::ResultType result )
         {
             received  = std::move( result );

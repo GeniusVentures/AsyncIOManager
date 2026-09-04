@@ -55,7 +55,6 @@ namespace sgns
     }
 
     std::shared_ptr<void> LocalFileLoader::LoadASync( std::string                              filename,
-                                                bool                                     parse,
                                                 bool                                     save,
                                                 std::shared_ptr<boost::asio::io_context> ioc,
                                                 CompletionCallback                       handle_read )
@@ -69,7 +68,7 @@ namespace sgns
             // File open failure
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::FILE_OPEN_FAIL ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::FILE_OPEN_FAIL ), false ); } );
             return result;
         }
         auto buffer = std::make_shared<boost::asio::streambuf>();
@@ -78,8 +77,8 @@ namespace sgns
             fileDevice->getFile(),
             *buffer,
             boost::asio::transfer_all(),
-            [this, fileDevice, ioc, handle_read, parse, save, buffer, filename]( const boost::system::error_code &error,
-                                                                                 std::size_t bytes_transferred )
+            [this, fileDevice, ioc, handle_read, save, buffer, filename]( const boost::system::error_code &error,
+                                                                         std::size_t bytes_transferred )
             {
                 if ( error.value() == 2 )
                 {
@@ -91,12 +90,12 @@ namespace sgns
                     size_t dataSize = buffer->size();
                     finaldata->second.emplace_back( boost::asio::buffers_begin( buffer->data() ),
                                                     boost::asio::buffers_begin( buffer->data() ) + dataSize );
-                    handle_read( ioc, finaldata, parse, save );
+                    handle_read( ioc, finaldata, save );
                 }
                 else
                 {
                     m_logger->error( "File read error: {}", error.message() );
-                    handle_read( ioc, outcome::failure( Error::READ_ERROR ), false, false );
+                    handle_read( ioc, outcome::failure( Error::READ_ERROR ), false );
                 }
             } );
 

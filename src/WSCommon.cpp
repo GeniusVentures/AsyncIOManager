@@ -25,12 +25,11 @@ namespace sgns
 {
     using namespace boost::asio;
 
-    WSDevice::WSDevice( std::string ws_host, std::string ws_path, std::string ws_port, bool parse, bool save )
+    WSDevice::WSDevice( std::string ws_host, std::string ws_path, std::string ws_port, bool save )
     {
         ws_host_ = ws_host;
         ws_path_ = ws_path;
         ws_port_ = ws_port;
-        parse_   = parse;
         save_    = save;
     }
 
@@ -48,21 +47,21 @@ namespace sgns
             m_logger->error( "Error resolving address: {}", e.what() );
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false ); } );
         }
         catch ( const std::exception &e )
         {
             m_logger->error( "Error resolving address: {}", e.what() );
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false ); } );
         }
         catch ( ... )
         {
             m_logger->error( "Error resolving address: Unknown" );
             boost::asio::post( *ioc,
                                [handle_read, ioc]()
-                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false, false ); } );
+                               { handle_read( ioc, outcome::failure( Error::COULD_NOT_RESOLVE ), false ); } );
         }
 
         //Create SSL Context, using context::tls to accept the highest version client/server can deal with
@@ -105,14 +104,14 @@ namespace sgns
                             else
                             {
                                 self->m_logger->error( "SSL handshake error: {}", handshakeError.message() );
-                                handle_read( ioc, outcome::failure( Error::HANDSHAKE_ERROR ), false, false );
+                                handle_read( ioc, outcome::failure( Error::HANDSHAKE_ERROR ), false );
                             }
                         } );
                 }
                 else
                 {
                     self->m_logger->error( "Connection error: {}", error.message() );
-                    handle_read( ioc, outcome::failure( Error::CONNECT_ERROR ), false, false );
+                    handle_read( ioc, outcome::failure( Error::CONNECT_ERROR ), false );
                 }
             } );
     }
@@ -158,13 +157,13 @@ namespace sgns
                                             finaldata->second.emplace_back(
                                                 boost::asio::buffers_begin( buffer->data() ),
                                                 boost::asio::buffers_begin( buffer->data() ) + dataSize );
-                                            handle_read( ioc, finaldata, self->parse_, self->save_ );
+                                            handle_read( ioc, finaldata, self->save_ );
                                         }
                                         else
                                         {
                                             self->m_logger->error( "File request read error: {}",
                                                                    read_error.message() );
-                                            handle_read( ioc, outcome::failure( Error::NO_EOF ), false, false );
+                                            handle_read( ioc, outcome::failure( Error::NO_EOF ), false );
                                         }
                                     } );
                             }
@@ -177,7 +176,7 @@ namespace sgns
                 else
                 {
                     self->m_logger->error( "WebSocket handshake error: {}", handshakeError.message() );
-                    handle_read( ioc, outcome::failure( Error::WS_HANDSHAKE_ERROR ), false, false );
+                    handle_read( ioc, outcome::failure( Error::WS_HANDSHAKE_ERROR ), false );
                 }
             } );
     }

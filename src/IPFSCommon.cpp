@@ -103,7 +103,6 @@ namespace sgns
                                         const sgns::ipfs_bitswap::CID           &cid,
                                         std::string                              filename,
                                         int                                      addressoffset,
-                                        bool                                     parse,
                                         bool                                     save,
                                         CompletionCallback                       handle_read )
     {
@@ -111,7 +110,7 @@ namespace sgns
         {
             // No DHT available - fall back to a direct bitswap request
             m_logger->warn( "No DHT available, skipping peer discovery for CID" );
-            return RequestBlockMain( ioc, cid, filename, addressoffset, parse, save, handle_read );
+            return RequestBlockMain( ioc, cid, filename, addressoffset, save, handle_read );
         }
 
         if ( !bitswap_->GetProviders( cid ).empty() )
@@ -119,7 +118,7 @@ namespace sgns
             // A seed provider is registered for this CID - the registry is
             // authoritative, skip DHT discovery entirely
             m_logger->info( "Seed provider registered for CID, skipping DHT discovery" );
-            return RequestBlockMain( ioc, cid, filename, addressoffset, parse, save, handle_read );
+            return RequestBlockMain( ioc, cid, filename, addressoffset, save, handle_read );
         }
 
         auto peer_id = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
@@ -131,7 +130,7 @@ namespace sgns
         auto self       = shared_from_this();
         auto findResult = dht_->FindProviders(
             cid,
-            [self, ioc, cid, filename, addressoffset, parse, save, handle_read](
+            [self, ioc, cid, filename, addressoffset, save, handle_read](
                 libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res )
             {
                 if ( !res )
@@ -141,7 +140,7 @@ namespace sgns
                     // the error here makes every caller hang on its ioc wait.
                     boost::asio::post( *ioc,
                                        [handle_read, ioc]() {
-                                           handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false, false );
+                                           handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false );
                                        } );
                     return false;
                 }
@@ -159,12 +158,12 @@ namespace sgns
                     }
                     self->addAddresses( cid, addresses );
 
-                    return self->RequestBlockMain( ioc, cid, filename, 0, parse, save, handle_read );
+                    return self->RequestBlockMain( ioc, cid, filename, 0, save, handle_read );
                 }
                 else
                 {
                     self->m_logger->error( "Empty provider list received" );
-                    self->StartFindingPeersWithRetry( ioc, cid, filename, addressoffset, parse, save, handle_read );
+                    self->StartFindingPeersWithRetry( ioc, cid, filename, addressoffset, save, handle_read );
                     return false;
                 }
             } );
@@ -175,7 +174,7 @@ namespace sgns
             // completion, otherwise callers wait forever on handle_read.
             boost::asio::post( *ioc,
                                [handle_read, ioc]() {
-                                   handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false, false );
+                                   handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false );
                                } );
             return false;
         }
@@ -186,7 +185,6 @@ namespace sgns
                                                  const sgns::ipfs_bitswap::CID           &cid,
                                                  std::string                              filename,
                                                  int                                      addressoffset,
-                                                 bool                                     parse,
                                                  bool                                     save,
                                                  CompletionCallback                       handle_read )
     {
@@ -195,12 +193,12 @@ namespace sgns
         // Capture shared_ptr to keep this object alive during callback
         auto self = shared_from_this();
         dhtretry_.async_wait(
-            [ioc, cid, filename, addressoffset, parse, save, handle_read, self]( const boost::system::error_code &ec )
+            [ioc, cid, filename, addressoffset, save, handle_read, self]( const boost::system::error_code &ec )
             {
                 if ( !ec )
                 {
                     // Timer expired, call StartFindingPeers again with captured parameters
-                    self->StartFindingPeers( ioc, cid, filename, addressoffset, parse, save, handle_read );
+                    self->StartFindingPeers( ioc, cid, filename, addressoffset, save, handle_read );
                 }
                 else
                 {
@@ -214,7 +212,6 @@ namespace sgns
                                        const sgns::ipfs_bitswap::CID           &cid,
                                        std::string                              filename,
                                        int                                      addressoffset,
-                                       bool                                     parse,
                                        bool                                     save,
                                        CompletionCallback                       handle_read )
     {
@@ -225,7 +222,7 @@ namespace sgns
         auto self = shared_from_this();
         bitswap_->RequestContent(
             cid,
-            [self, ioc, filename, parse, save, handle_read](
+            [self, ioc, filename, save, handle_read](
                 libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> contentResult )
             {
                 if ( !contentResult )
@@ -233,14 +230,14 @@ namespace sgns
                     self->m_logger->error( "Failed to retrieve content: {}", contentResult.error().message() );
                     boost::asio::post( *ioc,
                                        [handle_read, ioc]() {
-                                           handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false, false );
+                                           handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), false );
                                        } );
                     return;
                 }
 
                 // Convert UnixFSContent to AsyncIOManager format
                 auto unixfsContent = contentResult.value();
-                self->convertUnixFSContentToResult( ioc, unixfsContent, filename, parse, save, handle_read );
+                self->convertUnixFSContentToResult( ioc, unixfsContent, filename, save, handle_read );
             } );
         return true;
     }
@@ -248,7 +245,6 @@ namespace sgns
     void IPFSDevice::convertUnixFSContentToResult( std::shared_ptr<boost::asio::io_context> ioc,
                                                    const sgns::ipfs_bitswap::UnixFSContent &unixfsContent,
                                                    const std::string                       &filename,
-                                                   bool                                     parse,
                                                    bool                                     save,
                                                    CompletionCallback                       handle_read )
     {
@@ -290,15 +286,15 @@ namespace sgns
                             totalSize );
 
             boost::asio::post( *ioc,
-                               [handle_read, ioc, result, parse, save]()
-                               { handle_read( ioc, outcome::success( result ), parse, save ); } );
+                               [handle_read, ioc, result, save]()
+                               { handle_read( ioc, outcome::success( result ), save ); } );
         }
         catch ( const std::exception &e )
         {
             m_logger->error( "Error converting UnixFS content: {}", e.what() );
             boost::asio::post( *ioc,
-                               [handle_read, ioc, parse, save]()
-                               { handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), parse, save ); } );
+                               [handle_read, ioc, save]()
+                               { handle_read( ioc, outcome::failure( Error::CANNOT_DECODE ), save ); } );
         }
     }
 

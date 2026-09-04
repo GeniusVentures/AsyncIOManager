@@ -147,7 +147,7 @@ TEST_F( IPFSIntegrationTest, Loader_RetrievesPublishedContent )
 
         FileManager::GetInstance().LoadASync(
             loadUrl,
-            false, false, loadRunner.ioc(),
+            false, loadRunner.ioc(),
             [&]( FileManager::ResultType result )
             {
                 received = std::move( result );
@@ -218,7 +218,7 @@ TEST_F( IPFSIntegrationTest, Loader_FindsProviderViaDHT )
 
         FileManager::GetInstance().LoadASync(
             loadUrl,
-            false, false, loadRunner.ioc(),
+            false, loadRunner.ioc(),
             [&]( FileManager::ResultType result )
             {
                 received = std::move( result );
@@ -290,7 +290,7 @@ TEST_F( IPFSIntegrationTest, Loader_BadCIDReturnsError )
 
         // Use an obviously invalid CID
         FileManager::GetInstance().LoadASync(
-            "ipfs://invalid-cid/test.bin", false, false, runner.ioc(),
+            "ipfs://invalid-cid/test.bin", false, runner.ioc(),
             [&]( FileManager::ResultType buf )
             {
                 received  = std::move( buf );
@@ -318,7 +318,7 @@ TEST_F( IPFSIntegrationTest, Loader_InvalidUrlReturnsError )
 
         // Empty path should fail parsing inside IPFSLoader
         FileManager::GetInstance().LoadASync(
-            "ipfs://", false, false, runner.ioc(),
+            "ipfs://", false, runner.ioc(),
             [&]( FileManager::ResultType buf )
             {
                 received  = std::move( buf );

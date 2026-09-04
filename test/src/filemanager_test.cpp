@@ -152,7 +152,7 @@ TEST_F( FileManagerIntegrationTest, OutstandingOperations_IncrementAndDecrement 
     bool completed = false;
 
     FileManager::GetInstance().LoadASync(
-        "file://" + tf.pathString(), false, false, runner.ioc(),
+        "file://" + tf.pathString(), false, runner.ioc(),
         [&]( FileManager::ResultType ) { completed = true; },
         "" );
 
@@ -201,7 +201,7 @@ TEST_F( FileManagerIntegrationTest, LoadASync_SaveTrueAutoSavesLoadedDataToDisk 
     // finalcall deliberately empty: it fires at load completion, BEFORE the
     // auto-save lands — it must NOT be the done-signal. Poll the filesystem.
     FileManager::GetInstance().LoadASync(
-        "file://" + tf.pathString(), false, true, runner.ioc(), []( FileManager::ResultType ) {}, "file" );
+        "file://" + tf.pathString(), true, runner.ioc(), []( FileManager::ResultType ) {}, "file" );
 
     const auto basename = tf.path().filename().string();
     bool       ok       = pollUntil(
