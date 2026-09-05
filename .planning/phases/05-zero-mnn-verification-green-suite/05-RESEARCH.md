@@ -308,9 +308,9 @@ Not applicable — no evolving external stack this phase. (CMake 3.29.2 + VS 202
 | A2 | `W:\gnus\GeniusNetwork\thirdparty\build\Windows\Release` prebuilt libs are current enough to link the post-refactor library | Environment Availability | Medium — if stale, Release link fails → fall back to reconfiguring Debug tree in place (also D-39-allowed); Phase 4 linked against `thirdparty\build\Windows\Debug` successfully, Release tree existence verified live but its lib currency is unverified |
 | A3 | The 4 always-on suites pass in Release config | TEST-04 | Low — they passed in Debug (Phase 4, recorded 9/9 incl. these 4); no config-sensitive code known; `/MT` Release flags were always the wrapper default for Release config |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Which verify-tree arrangement — Release sibling vs Debug in place?**
+1. **Which verify-tree arrangement — Release sibling vs Debug in place?** — RESOLVED by D-39 executor discretion, encoded in 05-02-T1 as primary (Release sibling) + fallback (Debug in place).
    - What we know: both allowed by D-39 discretion; both caches hold NETWORK_TESTS=ON (need explicit OFF); Release sibling holds stale pre-rename binaries (Pitfall 4); Debug tree holds the Phase 1–4 evidence state.
    - What's unclear: whether the user prefers preserving the Debug tree untouched as historical evidence.
    - Recommendation: Release sibling (keeps Debug evidence intact, matches D-40's Release emphasis and the user's canonical command). Executor decides per discretion.
