@@ -29,7 +29,7 @@ shared_ptr<void> LoadASync( const std::string                       &url,
                             bool                                     save,
                             std::shared_ptr<boost::asio::io_context> ioc,
                             FinalCallback                            finalcall,
-                            std::string                              savertype );
+                            std::string                              savetype );
 
 void SaveASync( const std::string                       &url,
                 ResultType                               data,
