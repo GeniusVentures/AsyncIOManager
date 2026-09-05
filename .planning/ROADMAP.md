@@ -135,7 +135,16 @@ Plans:
   3. Full test suite builds and passes on Windows with `BUILD_TESTING=ON` — `ctest` reports zero failures
   4. A fresh out-of-source configure + build + test from a clean tree succeeds end to end
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — README.md full rewrite (D-36/D-37/D-38: protocol table, parse-free API sketch, verbatim canonical build commands, FileExample usage) + live D-35 zero-mnn gate + TEST-03 sub-gate (BUILD-02/TEST-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 05-02-PLAN.md — Release verification loop (D-33/D-39/D-40: gate-OFF reconfigure, 4-entry pre-check, `--clean-first` rebuild, ctest 4/4) + phase-end consolidated gate with 4-row criteria table + evidence record
 
 ## Traceability
 
@@ -176,7 +185,7 @@ Plans:
 | 2. LocalFileCommon Platform Split | 2/2 | Complete    | 2026-09-04 |
 | 3. Parser Layer Removal | 2/2 | Complete    | 2026-09-04 |
 | 4. Build Purge & Generic Example | 2/2 | Complete    | 2026-09-04 |
-| 5. Zero-MNN Verification & Green Suite | 0/? | Not started | - |
+| 5. Zero-MNN Verification & Green Suite | 0/2 | In planning | - |
 
 ---
 
