@@ -41,10 +41,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [ ] **TEST-01**: `mnn_loader_test` / `mnn_saver_test` are renamed to `localfile_loader_test` / `localfile_saver_test` covering the same behaviors (sync load, async load, nonexistent-file error, sync save, null-data error, async save)
 - [ ] **TEST-02**: `filemanager_test` dispatch expectations updated to `LocalFileLoader`/`LocalFileSaver` names
-- [ ] **TEST-03**: All tests reference generic fixtures, not `.mnn` files
-- [ ] **TEST-04**: Full test suite builds and passes on Windows (`BUILD_TESTING=ON`)
+- [x] **TEST-03**: All tests reference generic fixtures, not `.mnn` files
+- [x] **TEST-04**: Full test suite builds and passes on Windows (`BUILD_TESTING=ON`)
 - [x] **BUILD-01**: `MNNExample` is replaced by a generic example (e.g. `FileExample`) demonstrating `file://` load and save via `FileManager`
-- [ ] **BUILD-02**: Library builds clean on Windows with zero MNN dependency; `grep -ri mnn` over `include/ src/ test/ example/ CMakeLists.txt` returns no matches
+- [x] **BUILD-02**: Library builds clean on Windows with zero MNN dependency; `grep -ri mnn` over `include/ src/ test/ example/ CMakeLists.txt` returns no matches
 
 ## v2 Requirements
 
@@ -100,10 +100,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PARSE-04 | Phase 3 | Complete |
 | TEST-01 | Phase 1 | Pending |
 | TEST-02 | Phase 1 | Pending |
-| TEST-03 | Phase 5 | Pending |
-| TEST-04 | Phase 5 | Pending |
+| TEST-03 | Phase 5 | Complete |
+| TEST-04 | Phase 5 | Complete |
 | BUILD-01 | Phase 4 | Complete |
-| BUILD-02 | Phase 5 | Pending |
+| BUILD-02 | Phase 5 | Complete |
 
 **Coverage:**
 
