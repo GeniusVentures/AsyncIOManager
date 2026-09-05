@@ -1,129 +1,97 @@
-# FileLoader
-Parsing and loading any format file support by Genuis Project
-Current file format support
-- MNN format
-- **TODO**: Add more format file
+# AsyncIOManager
+
+A C++17 asynchronous I/O library for loading and saving data across local and remote protocols behind one URL-dispatched `FileManager` API, built on Boost.Asio. Point any operation at a URL and the handler registered for that prefix does the rest.
+
+## Protocol Support
+
+| Prefix | Load | Save | Notes |
+|--------|------|------|-------|
+| `file://` | ✓ | ✓ | Local files via `LocalFileLoader` / `LocalFileSaver` |
+| `https://` | ✓ | — | `HTTPLoader` (plain `http://` registration is disabled) |
+| `ipfs://` | ✓ | ✓ | `IPFSLoader` / `IPFSSaver` (bitswap-backed) |
+| `sftp://` | dormant (not initialized) | ✓ | `SFTPSaver` active; `SFTPLoader` built but not initialized |
+| `wss://` | dormant (not initialized) | — | `WSLoader` built but not initialized |
 
 ## Design
 
-Singleton pattern is apply for all Loader/Parser
+Loaders and savers are self-registering singletons. Each one registers its URL prefix with `FileManager::GetInstance()`; `FileManager::InitializeSingletons()` activates the handlers listed above, and every load/save call is dispatched by URL prefix.
 
-```mermaid
----
-title: FileLoader
----
-classDiagram
-	FileLoader <|-- MNNLoader
-	FileLoader <|-- IPFSLoader
-	FileLoader: +LoadFile()
-	
-	class MNNLoader {
-		+LoadFile(e)
-	}
-	class IPFSLoader {
-		+LoadFile()
-	}
+## Public API
 
+Signatures copied from `include/FileManager.hpp`:
+
+```cpp
+using ResultType = outcome::result<std::shared_ptr<
+    std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>>;
+using FinalCallback = std::function<void( ResultType buffers )>;
+
+shared_ptr<void> LoadASync( const std::string                       &url,
+                            bool                                     save,
+                            std::shared_ptr<boost::asio::io_context> ioc,
+                            FinalCallback                            finalcall,
+                            std::string                              savertype );
+
+void SaveASync( const std::string                       &url,
+                ResultType                               data,
+                std::shared_ptr<boost::asio::io_context> ioc,
+                FinalCallback                            finalcall,
+                std::shared_ptr<std::string>             save_location = nullptr );
 ```
 
-```mermaid
----
-title: FileParser
----
-classDiagram
-	FileParser <|-- MNNParser
-	FileParser <|-- IPFSParser
-	FileParser: +ParseData()
-	
-	class MNNParser {
-		+ParseData()
-	}
-	class IPFSParser {
-		+ParseData()
-	}
-```
+`outcome::result<T>` has a deleted default constructor — capture results with `std::optional<FileManager::ResultType>` (assign on success; an empty optional after the callback means failure, reported through `result.error().message()`).
 
-```mermaid
----
-title: FileManager
----
-classDiagram
-	class FileManager {
-		+map<std::string, FileLoader*> loaders
-		+map<std::string, FileParser*> parsers
-		+map<std::string, FileSaver*> savers
-		+RegisterLoader(prefix, handlerLoader)
-		+RegisterParser(suffix, handlerParser)
-		+RegisterSaver(prefix, handlerSaver)
-		+LoadFile(filePath, isParse)
-		+ParseData(suffix, data)
-		+SaveFile(filePath, data)
-	}
-```
+## Dependencies
 
-## Depend on the library
+All dependencies are resolved from a prebuilt thirdparty tree at configure time (no downloads):
 
-- MNN: [https://github.com/alibaba/MNN](https://github.com/alibaba/MNN)
-- Google Test: [https://github.com/google/googletest](https://github.com/google/googletest)
+- Boost.Asio / Boost.Beast / Boost.Asio SSL (OpenSSL backend)
+- libp2p
+- ipfs-lite / ipfs-bitswap
+- libssh2
+- spdlog
+- Google Test — only when building the test suite
 
-## Build with Linux
+## Build
 
-This is build a project alone.
+The CMake wrapper lives at `build/<Platform>/` (e.g. `build/Windows/`) and requires a prebuilt thirdparty tree pointed at by `THIRDPARTY_DIR`. The root `CMakeLists.txt` is what the super-build's ExternalProject consumes — do not configure it directly.
+
+Windows (Visual Studio 2022):
 
 ```sh
-$ mkdir .build
-$ cd .build
-$ cmake ..
-$ make
-Consolidate compiler generated dependencies of target fileloader
-[ 57%] Built target MNN
-[ 64%] Building CXX object CMakeFiles/fileloader.dir/src/MNNParser.cpp.o
-[ 71%] Building CXX object CMakeFiles/fileloader.dir/src/MNNLoader.cpp.o
-[ 85%] Built target fileloader
-Consolidate compiler generated dependencies of target MNNExample
-[ 92%] Building CXX object CMakeFiles/MNNExample.dir/MNNExample.cpp.o
-[100%] Linking CXX executable MNNExample
-[100%] Built target MNNExample
+cd build/Windows
+cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=W:\gnus\GeniusNetwork\thirdparty
+cmake --build . --parallel 8 --config Release
 ```
 
-## Build with Windows
-TODO: Need to update
+POSIX (make):
 
-## Build with Mac OS
-TODO: Need to update
-
-## Run the example
-```bash
-$ ./MNNExample 1.mnn 
-LoadFile: DEBUG: filePath: file://1.mnn -prefix: file: -filename: 1.mnn -suffix: .mnn -filepathname: file://1.mnn
-LoadFile Parse: DEBUG: filePath: file://1.mnn -prefix: file: -filename: 1.mnn -suffix: .mnn -filepathname: file://1.mnn
-The device support i8sdot:0, support fp16:0, support i8mm: 0
-        **Tensor shape**: 3, 320, 320, 
-Error for compute convolution shape, inputCount:3, outputCount:24, KH:3, KW:3, group:1
-inputChannel: 320, batch:3, width:320, height:320. Input data channel may be mismatch with filter channel count
-Compute Shape Error for 967
-        **Tensor shape**: 3, 320, 320, 
-        **Tensor shape**: 1, 400, 80, 
-        **Tensor shape**: 1, 100, 80, 
-        **Tensor shape**: 1, 1600, 80, 
-        **Tensor shape**: 1, 400, 4, 
-        **Tensor shape**: 1, 100, 4, 
-        **Tensor shape**: 1, 1600, 4, 
-==================INPUT-DIMS================
-Dimension Type: (CAFE/PyTorch/ONNX) uses NCHW as data format
-==================OUTPUT-DIMS================
-Output : cls_pred_stride_16
-Output : cls_pred_stride_32
-Output : cls_pred_stride_8
-Output : dis_pred_stride_16
-Output : dis_pred_stride_32
-Output : dis_pred_stride_8
-=============================================
-
-`U
-ParseFile: SaveFile: Saving File... -> Inside the IPFSSaver::SaveFile Function
-
+```sh
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DTHIRDPARTY_DIR=/Users/fuu/gnus/thirdparty/
+make -j8
 ```
 
-## Future thinking
-- Use [flatbuffer](https://github.com/google/flatbuffers) library to replace the raw buffer 
+POSIX (Ninja):
+
+```sh
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=/Users/fuu/gnus/thirdparty/
+ninja -j8
+```
+
+Add `-DTESTING=ON` to the configure step to build the test suite (optional; defaults ON).
+
+## Run the Example
+
+```
+FileExample [input-url] [output-dir-url]
+```
+
+Defaults: input `file://example_data.bin` (relative to the process CWD — run from `example/`), output `file://example_output/` (the roundtrip lands in `example_output/<basename>`).
+
+Expected output:
+
+```
+Loaded "example_data.bin" (1024 bytes) from file://example_data.bin
+Saved "example_data.bin" (1024 bytes) to file://example_output/
+```
+
+Exit code 0 on success; 1 on failure, delivered via the completion callback (errors are never thrown).
