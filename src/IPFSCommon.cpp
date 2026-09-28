@@ -122,6 +122,19 @@ namespace sgns
             return RequestBlockMain( ioc, cid, filename, addressoffset, parse, save, handle_read );
         }
 
+        // Local-store check (single-node grid transport): content produced
+        // ON THIS NODE (e.g. processing results published by a local worker)
+        // sits in the bitswap block store but has NO provider registered and
+        // no DHT record — DHT discovery would spin "Empty provider list"
+        // forever even though the bytes are local. RequestBlockMain's
+        // RequestContent hits the local-first fast path and walks the dag
+        // entirely from the local store.
+        if ( bitswap_->HasBlock( cid ) )
+        {
+            m_logger->info( "Block available in local store, skipping DHT discovery" );
+            return RequestBlockMain( ioc, cid, filename, addressoffset, parse, save, handle_read );
+        }
+
         auto peer_id = libp2p::peer::PeerId::fromHash( cid.content_address ).value();
         (void) peer_id;
         // Capture shared_ptr to keep this object alive during the async DHT

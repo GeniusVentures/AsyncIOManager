@@ -171,10 +171,15 @@ namespace sgns
                                 m_logger->info( "Successfully published file '{}' to IPFS with CID: {}",
                                                 filePaths[0],
                                                 cidString.value() );
-                                // Report the CID back to the caller
+                                // Report the CID back to the caller. NOTE:
+                                // parseIPFSUrl REQUIRES a filename component
+                                // after the CID — a bare "ipfs://<CID>" is
+                                // rejected as INVALID_URL at fetch time. Append
+                                // the published file name so the location is
+                                // directly fetchable via FileManager.
                                 if ( save_location )
                                 {
-                                    *save_location = "ipfs://" + cidString.value();
+                                    *save_location = "ipfs://" + cidString.value() + "/" + filePaths[0];
                                 }
                             }
                             else
@@ -259,10 +264,14 @@ namespace sgns
                             {
                                 m_logger->info( "Successfully published directory to IPFS with root CID: {}",
                                                 cidString.value() );
-                                // Report the CID back to the caller
+                                // Report the CID back to the caller. Same
+                                // parseIPFSUrl constraint as the single-file
+                                // site: the location must carry a path
+                                // component or fetches reject it. Use the first
+                                // file as the representative entry point.
                                 if ( save_location )
                                 {
-                                    *save_location = "ipfs://" + cidString.value();
+                                    *save_location = "ipfs://" + cidString.value() + "/" + filePaths[0];
                                 }
                             }
                             else

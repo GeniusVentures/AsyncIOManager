@@ -107,8 +107,12 @@ namespace sgns
 
         auto loggerIdentifyMsgProcessor = libp2p::log::createLogger( "IdentifyMsgProcessor" );
         loggerIdentifyMsgProcessor->setLevel( soralog::Level::OFF );
-        auto loggerProcessingEngine = sgns::ipfs_bitswap::createLogger( "Bitswap" );
-        loggerProcessingEngine->set_level( spdlog::level::off );
+        // Bring-up fix (elmbridge 04-05): do NOT blanket-mute the process-wide
+        // "Bitswap" logger here. This runs on EVERY LoadASync and silenced all
+        // fetch-side bitswap diagnostics (including error-level) for the whole
+        // process — the single-node E2E bring-up chased ghosts because of it.
+        // Level control belongs to the operator (GeniusNode LoadLogConfig /
+        // sgnslog sinks), not to a library entry point.
         std::shared_ptr<string> result = std::make_shared<string>( "init" );
 
         //Get CID and Filename
