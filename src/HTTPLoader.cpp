@@ -2,6 +2,9 @@
 #include "FileManager.hpp"
 #include "HTTPLoader.hpp"
 #include "HTTPCommon.hpp"
+#include "HTTPClient.hpp"
+
+#include <filesystem>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, HTTPLoader::Error, e )
 {
@@ -15,20 +18,26 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, HTTPLoader::Error, e )
 
 namespace sgns
 {
-    HTTPLoader *HTTPLoader::_instance = nullptr;
+    HTTPLoader *HTTPLoader::_instance      = nullptr;
+    HTTPLoader *HTTPLoader::_plainInstance = nullptr;
 
     void HTTPLoader::InitializeSingleton()
     {
         if ( _instance == nullptr )
         {
-            _instance = new HTTPLoader();
+            _instance = new HTTPLoader( true, 443 );
         }
+        FileManager::GetInstance().RegisterLoader( "https", _instance );
+        if ( _plainInstance == nullptr )
+        {
+            _plainInstance = new HTTPLoader( false, 80 );
+        }
+        FileManager::GetInstance().RegisterLoader( "http", _plainInstance );
     }
 
-    HTTPLoader::HTTPLoader()
+    HTTPLoader::HTTPLoader( bool useTLS, unsigned defaultPort )
+        : useTLS_( useTLS ), defaultPort_( defaultPort )
     {
-        //FileManager::GetInstance().RegisterLoader("http", this);
-        FileManager::GetInstance().RegisterLoader( "https", this );
     }
 
     std::shared_ptr<void> HTTPLoader::LoadFile( std::string filename )
@@ -58,8 +67,40 @@ namespace sgns
             return result;
         }
 
-        auto httpDevice = std::make_shared<HTTPDevice>( http_host, http_path, http_port, parse, save );
-        httpDevice->StartHTTPDownload( ioc, handle_read );
+        // parseHTTPUrl defaults a missing port to "443"; the plain loader
+        // must substitute its own default when the URL carried none (D-03)
+        if ( !useTLS_ && http_port == "443" )
+        {
+            http_port = std::to_string( defaultPort_ );
+        }
+
+        if ( useTLS_ )
+        {
+            auto httpDevice = std::make_shared<HTTPDevice>( http_host, http_path, http_port, parse, save );
+            httpDevice->StartHTTPDownload( ioc, handle_read );
+        }
+        else
+        {
+            // Plain http:// dispatch through the status-aware client, adapted
+            // back into the legacy ResultType (filename from path, body only).
+            // status intentionally not surfaced on legacy path
+            auto client = std::make_shared<HTTPClient>( http_host, http_path, http_port );
+            http::RequestOptions options;
+            options.caCertFile = std::nullopt;
+            auto response      = client->ExecuteBlocking( ioc, options );
+            if ( response )
+            {
+                auto finaldata    = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
+                std::filesystem::path p( http_path );
+                finaldata->first.push_back( p.filename().string() );
+                finaldata->second.emplace_back( response.value().body.begin(), response.value().body.end() );
+                handle_read( ioc, finaldata, parse, save );
+            }
+            else
+            {
+                handle_read( ioc, outcome::failure( Error::INVALID_URL ), false, false );
+            }
+        }
 
         return result;
     }

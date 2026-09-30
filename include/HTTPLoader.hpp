@@ -59,6 +59,19 @@ namespace sgns
                                          CompletionCallback                       callback ) override;
 
     protected:
+        /**
+         * Construct a scheme-specific HTTP loader.
+         * @param useTLS - true serves https:// (legacy HTTPDevice path);
+         *   false serves http:// through the status-aware HTTPClient
+         * @param defaultPort - port substituted when the URL carries none
+         */
+        HTTPLoader( bool useTLS, unsigned defaultPort );
+
+        bool    useTLS_      = true;
+        unsigned defaultPort_ = 443;
+
+    private:
+        static HTTPLoader *_plainInstance;
     };
 
 } // End namespace sgns

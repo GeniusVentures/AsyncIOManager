@@ -2,6 +2,7 @@ add_library(AsyncIOManager STATIC
     FILECommon.cpp
     FileManager.cpp
     HTTPCommon.cpp
+    HTTPClient.cpp
     HTTPLoader.cpp
     IPFSCommon.cpp
     IPFSLoader.cpp
