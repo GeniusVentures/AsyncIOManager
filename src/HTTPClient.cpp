@@ -1,5 +1,5 @@
-﻿/**
- * Source file for the HTTPClient Ã¢â‚¬â€ status-aware sibling of HTTPDevice (D-01).
+/**
+ * Source file for the HTTPClient -- status-aware sibling of HTTPDevice (D-01).
  */
 #include "HTTPClient.hpp"
 
@@ -15,7 +15,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/asio/ssl/host_name_verification.hpp>
 
-OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, http::ClientError, e )
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::http, ClientError, e )
 {
     switch ( e )
     {
@@ -65,7 +65,7 @@ namespace
 
     /// @brief Arm a millisecond deadline over the variant stream (P-1 widened:
     /// the timer lambda captures the stream shared_ptr so the SSL stream stays
-    /// alive through a timeout fire Ã¢â‚¬â€ R1).
+    /// alive through a timeout fire -- R1).
     Deadline ArmDeadline( const std::shared_ptr<boost::asio::io_context> &ioc,
                           const std::shared_ptr<Stream>                   &stream,
                           std::chrono::milliseconds                        timeout )
@@ -97,11 +97,24 @@ namespace
     {
         boost::beast::http::response_parser<boost::beast::http::string_body> parser;
         parser.body_limit( ( std::numeric_limits<std::uint64_t>::max )() );
-        boost::beast::error_code                                             ec;
-        parser.put( boost::asio::buffer( raw ), ec );
-        if ( ec )
+        boost::beast::error_code ec;
+        // Feed the buffer incrementally: put() consumes only what the current
+        // parser state accepts (headers first, then body) -- a single call on
+        // a full response leaves the body unconsumed. Loop until it stops
+        // eating, then put_eof() finalizes the parse.
+        std::size_t offset = 0;
+        while ( offset < raw.size() )
         {
-            return outcome::failure( sgns::http::ClientError::NO_HEADER );
+            std::size_t consumed = parser.put( boost::asio::buffer( raw.data() + offset, raw.size() - offset ), ec );
+            if ( ec )
+            {
+                return outcome::failure( sgns::http::ClientError::NO_HEADER );
+            }
+            if ( consumed == 0 )
+            {
+                break;
+            }
+            offset += consumed;
         }
         if ( !parser.is_done() )
         {
@@ -221,7 +234,7 @@ namespace sgns
                 {
                     if ( !options.caCertFile.has_value() )
                     {
-                        // Plain HTTP: no handshake Ã¢â‚¬â€ go straight to the exchange
+                        // Plain HTTP: no handshake -- go straight to the exchange
                         self->StartExchange( ioc, options, stream, onDone );
                         return;
                     }
@@ -263,7 +276,7 @@ namespace sgns
     {
         auto typed_stream = std::static_pointer_cast<Stream>( stream );
 
-        // Build the GET request Ã¢â‚¬â€ UA comes from options (D-08), never a literal
+        // Build the GET request -- UA comes from options (D-08), never a literal
         std::string get_request = "GET " + http_target_ + " HTTP/1.1\r\nHost: " + http_host_ + "\r\nUser-Agent: " +
                                   options.userAgent + "\r\nConnection: close\r\n";
         for ( const auto &[name, value] : options.extraHeaders )
@@ -273,13 +286,15 @@ namespace sgns
         get_request += "\r\n";
 
         auto read_deadline = ArmDeadline( ioc, typed_stream, options.readTimeout );
+        // The request string must outlive StartExchange (dangling-view fix)
+        auto request_ptr = std::make_shared<std::string>( std::move( get_request ) );
         std::visit(
-            [&get_request, ioc, typed_stream, &read_deadline, self = shared_from_this(), &options, onDone]( auto &s )
+            [request_ptr, ioc, typed_stream, read_deadline, self = shared_from_this(), onDone]( auto &s )
             {
                 boost::asio::async_write(
                     s,
-                    boost::asio::buffer( get_request ),
-                    [self, ioc, typed_stream, onDone, read_deadline]( const boost::system::error_code &write_error,
+                    boost::asio::buffer( *request_ptr ),
+                    [self, ioc, typed_stream, onDone, read_deadline, request_ptr]( const boost::system::error_code &write_error,
                                                                       std::size_t )
                     {
                         if ( !write_error )
@@ -296,7 +311,7 @@ namespace sgns
                                             const boost::system::error_code &read_error, std::size_t )
                                         {
                                             CancelDeadline( read_deadline );
-                                            // EOF is success Ã¢â‚¬â€ Connection: close (R10)
+                                            // EOF is success -- Connection: close (R10)
                                             if ( read_error && read_error != boost::asio::error::eof )
                                             {
                                                 self->m_logger->error( "Error, connection interrupted" );
@@ -328,15 +343,24 @@ namespace sgns
 
     HTTPClient::Result HTTPClient::ExecuteBlocking( std::shared_ptr<boost::asio::io_context> ioc, const http::RequestOptions &options )
     {
-        std::promise<Result>                        promise;
-        std::future<HTTPClient::Result>             future = promise.get_future();
-        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( ioc->get_executor() );
+        std::promise<Result>                                                                            promise;
+        std::future<HTTPClient::Result>                                                                 future = promise.get_future();
+        auto workGuard = std::make_shared<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(
+            ioc->get_executor() );
 
-        Execute( ioc, options, [&promise]( std::shared_ptr<boost::asio::io_context>, Result result )
-                 { promise.set_value( std::move( result ) ); } );
+        Execute( ioc,
+                 options,
+                 [&promise, workGuard]( std::shared_ptr<boost::asio::io_context>, Result result )
+                 {
+                     promise.set_value( std::move( result ) );
+                     // Release the guard on the io thread BEFORE run() can
+                     // observe it -- held-forever guards deadlock run() (P-8).
+                     workGuard->reset();
+                 } );
 
         ioc->run();
-        workGuard.reset();
         return future.get();
     }
 } // namespace sgns
+
+// SENTINEL_TEST_547509536
