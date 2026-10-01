@@ -83,23 +83,34 @@ namespace sgns
         {
             // Plain http:// dispatch through the status-aware client, adapted
             // back into the legacy ResultType (filename from path, body only).
-            // status intentionally not surfaced on legacy path
-            auto client = std::make_shared<HTTPClient>( http_host, http_path, http_port );
+            // status intentionally not surfaced on legacy path.
+            // Async Execute (never ExecuteBlocking): the caller owns the ioc
+            // run-loop (work-guard pattern) — blocking here would double-run
+            // or deadlock against the caller's own ioc->run().
+            auto                client  = std::make_shared<HTTPClient>( http_host, http_path, http_port );
             http::RequestOptions options;
             options.caCertFile = std::nullopt;
-            auto response      = client->ExecuteBlocking( ioc, options );
-            if ( response )
-            {
-                auto finaldata    = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
-                std::filesystem::path p( http_path );
-                finaldata->first.push_back( p.filename().string() );
-                finaldata->second.emplace_back( response.value().body.begin(), response.value().body.end() );
-                handle_read( ioc, finaldata, parse, save );
-            }
-            else
-            {
-                handle_read( ioc, outcome::failure( Error::INVALID_URL ), false, false );
-            }
+            client->Execute(
+                ioc,
+                options,
+                [client, http_path, parse, save, handle_read, ioc]( std::shared_ptr<boost::asio::io_context>,
+                                                                    HTTPClient::Result response )
+                {
+                    if ( response )
+                    {
+                        auto finaldata = std::make_shared<
+                            std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
+                        std::filesystem::path p( http_path );
+                        finaldata->first.push_back( p.filename().string() );
+                        finaldata->second.emplace_back( response.value().body.begin(),
+                                                        response.value().body.end() );
+                        handle_read( ioc, finaldata, parse, save );
+                    }
+                    else
+                    {
+                        handle_read( ioc, outcome::failure( Error::INVALID_URL ), false, false );
+                    }
+                } );
         }
 
         return result;
