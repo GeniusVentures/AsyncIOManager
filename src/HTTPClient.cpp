@@ -362,5 +362,3 @@ namespace sgns
         return future.get();
     }
 } // namespace sgns
-
-// SENTINEL_TEST_547509536
